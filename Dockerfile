@@ -1,4 +1,5 @@
 # Build stage
+# syntax=docker/dockerfile:1.6
 FROM docker.io/library/node:20-slim AS builder
 
 # Install build dependencies
@@ -13,12 +14,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Enable pnpm via corepack
 RUN corepack enable && corepack prepare pnpm@10.15.1 --activate
 
-# Copy source code
-COPY . /home/node/app
+# Leverage dependency caching based on lockfile
 WORKDIR /home/node/app
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+RUN --mount=type=cache,target=/root/.pnpm-store pnpm fetch
 
-# Install dependencies and build packages with pnpm
-RUN pnpm install \
+# Copy source code
+COPY . .
+
+# Install dependencies (offline using fetched store) and build packages with pnpm
+RUN --mount=type=cache,target=/root/.pnpm-store pnpm install --frozen-lockfile --offline \
   && pnpm -r build \
   && bash -lc 'cd packages/cli && pnpm pack && mkdir -p dist && mv *.tgz dist/' \
   && bash -lc 'cd packages/core && pnpm pack && mkdir -p dist && mv *.tgz dist/'

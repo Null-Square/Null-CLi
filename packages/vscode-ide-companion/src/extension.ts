@@ -10,9 +10,9 @@ import { IDEServer } from './ide-server.js';
 import { DiffContentProvider, DiffManager } from './diff-manager.js';
 import { createLogger } from './utils/logger.js';
 
-const INFO_MESSAGE_SHOWN_KEY = 'qwenCodeInfoMessageShown';
-const IDE_WORKSPACE_PATH_ENV_VAR = 'QWEN_CODE_IDE_WORKSPACE_PATH';
-export const DIFF_SCHEME = 'qwen-diff';
+const INFO_MESSAGE_SHOWN_KEY = 'nullCliInfoMessageShown';
+const IDE_WORKSPACE_PATH_ENV_VAR = 'NULL_CLI_IDE_WORKSPACE_PATH';
+export const DIFF_SCHEME = 'null-diff';
 
 let ideServer: IDEServer;
 let logger: vscode.OutputChannel;
@@ -38,7 +38,7 @@ function updateWorkspacePath(context: vscode.ExtensionContext) {
 }
 
 export async function activate(context: vscode.ExtensionContext) {
-  logger = vscode.window.createOutputChannel('Qwen Code Companion');
+  logger = vscode.window.createOutputChannel('Null CLI Companion');
   log = createLogger(context, logger);
   log('Extension activated');
 
@@ -57,13 +57,13 @@ export async function activate(context: vscode.ExtensionContext) {
       DIFF_SCHEME,
       diffContentProvider,
     ),
-    vscode.commands.registerCommand('qwen.diff.accept', (uri?: vscode.Uri) => {
+    vscode.commands.registerCommand('null.diff.accept', (uri?: vscode.Uri) => {
       const docUri = uri ?? vscode.window.activeTextEditor?.document.uri;
       if (docUri && docUri.scheme === DIFF_SCHEME) {
         diffManager.acceptDiff(docUri);
       }
     }),
-    vscode.commands.registerCommand('qwen.diff.cancel', (uri?: vscode.Uri) => {
+    vscode.commands.registerCommand('null.diff.cancel', (uri?: vscode.Uri) => {
       const docUri = uri ?? vscode.window.activeTextEditor?.document.uri;
       if (docUri && docUri.scheme === DIFF_SCHEME) {
         diffManager.cancelDiff(docUri);
@@ -81,7 +81,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   if (!context.globalState.get(INFO_MESSAGE_SHOWN_KEY)) {
     void vscode.window.showInformationMessage(
-      'Qwen Code Companion extension successfully installed.',
+      'Null CLI Companion extension successfully installed.',
     );
     context.globalState.update(INFO_MESSAGE_SHOWN_KEY, true);
   }
@@ -90,11 +90,11 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.workspace.onDidChangeWorkspaceFolders(() => {
       updateWorkspacePath(context);
     }),
-    vscode.commands.registerCommand('qwen-code.runQwenCode', async () => {
+    vscode.commands.registerCommand('null.runNull', async () => {
       const workspaceFolders = vscode.workspace.workspaceFolders;
       if (!workspaceFolders || workspaceFolders.length === 0) {
         vscode.window.showInformationMessage(
-          'No folder open. Please open a folder to run Qwen Code.',
+          'No folder open. Please open a folder to run Null CLI.',
         );
         return;
       }
@@ -104,21 +104,21 @@ export async function activate(context: vscode.ExtensionContext) {
         selectedFolder = workspaceFolders[0];
       } else {
         selectedFolder = await vscode.window.showWorkspaceFolderPick({
-          placeHolder: 'Select a folder to run Qwen Code in',
+          placeHolder: 'Select a folder to run Null CLI in',
         });
       }
 
       if (selectedFolder) {
-        const qwenCmd = 'qwen';
+        const qwenCmd = 'null';
         const terminal = vscode.window.createTerminal({
-          name: `Qwen Code (${selectedFolder.name})`,
+          name: `Null CLI (${selectedFolder.name})`,
           cwd: selectedFolder.uri.fsPath,
         });
         terminal.show();
         terminal.sendText(qwenCmd);
       }
     }),
-    vscode.commands.registerCommand('qwen-code.showNotices', async () => {
+    vscode.commands.registerCommand('null.showNotices', async () => {
       const noticePath = vscode.Uri.joinPath(
         context.extensionUri,
         'NOTICES.txt',

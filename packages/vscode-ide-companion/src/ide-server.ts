@@ -242,7 +242,7 @@ export class IDEServer {
 const createMcpServer = (diffManager: DiffManager) => {
   const server = new McpServer(
     {
-      name: 'qwen-code-companion-mcp-server',
+      name: 'null-cli-companion-mcp-server',
       version: '1.0.0',
     },
     { capabilities: { logging: {} } },

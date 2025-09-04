@@ -81,7 +81,7 @@ describe('activate', () => {
     vi.mocked(context.globalState.get).mockReturnValue(undefined);
     await activate(context);
     expect(showInformationMessageMock).toHaveBeenCalledWith(
-      'Qwen Code Companion extension successfully installed.',
+      'Null CLI Companion extension successfully installed.',
     );
   });
 
@@ -91,17 +91,17 @@ describe('activate', () => {
     expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
   });
 
-  it('should launch Qwen Code when the user clicks the button', async () => {
+  it('should launch Null CLI when the user clicks the button', async () => {
     const showInformationMessageMock = vi
       .mocked(vscode.window.showInformationMessage)
-      .mockResolvedValue('Run Qwen Code' as never);
+      .mockResolvedValue('Run Null CLI' as never);
     vi.mocked(context.globalState.get).mockReturnValue(undefined);
     await activate(context);
     expect(showInformationMessageMock).toHaveBeenCalled();
     await new Promise(process.nextTick); // Wait for the promise to resolve
     const commandCallback = vi
       .mocked(vscode.commands.registerCommand)
-      .mock.calls.find((call) => call[0] === 'qwen-code.runQwenCode')?.[1];
+      .mock.calls.find((call) => call[0] === 'null.runNull')?.[1];
 
     expect(commandCallback).toBeDefined();
   });

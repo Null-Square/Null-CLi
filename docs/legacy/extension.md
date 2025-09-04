@@ -1,4 +1,4 @@
-# Qwen Code Extensions
+# Qwen Code Extensions (Legacy)
 
 Qwen Code supports extensions that can be used to configure and extend its functionality.
 

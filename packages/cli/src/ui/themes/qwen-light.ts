@@ -26,7 +26,7 @@ const qwenLightColors: ColorsTheme = {
 };
 
 export const QwenLight: Theme = new Theme(
-  'Qwen Light',
+  'Null Light',
   'light',
   {
     hljs: {

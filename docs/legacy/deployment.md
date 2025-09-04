@@ -1,4 +1,4 @@
-# Qwen Code Execution and Deployment
+# Qwen Code Execution and Deployment (Legacy)
 
 This document describes how to run Qwen Code and explains the deployment architecture that Qwen Code uses.
 

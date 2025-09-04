@@ -18,7 +18,7 @@ import {
   SessionMetrics,
   ModelMetrics,
   sessionId,
-} from '@qwen-code/qwen-code-core';
+} from '@null/null-core';
 
 // --- Interface Definitions ---
 

@@ -20,7 +20,7 @@ import {
   MCPServerStatus,
   mcpServerRequiresOAuth,
   getErrorMessage,
-} from '@qwen-code/qwen-code-core';
+} from '@null/null-core';
 
 const COLOR_GREEN = '\u001b[32m';
 const COLOR_YELLOW = '\u001b[33m';
@@ -140,7 +140,7 @@ const getMcpStatus = async (
       needsAuthHint = true;
       try {
         const { MCPOAuthTokenStorage } = await import(
-          '@qwen-code/qwen-code-core'
+          '@null/null-core'
         );
         const hasToken = await MCPOAuthTokenStorage.getToken(serverName);
         if (hasToken) {
@@ -377,7 +377,7 @@ const authCommand: SlashCommand = {
       );
 
       // Import dynamically to avoid circular dependencies
-      const { MCPOAuthProvider } = await import('@qwen-code/qwen-code-core');
+      const { MCPOAuthProvider } = await import('@null/null-core');
 
       let oauthConfig = server.oauth;
       if (!oauthConfig) {

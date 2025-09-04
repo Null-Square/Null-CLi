@@ -9,7 +9,7 @@ import {
   Config,
   getProjectCommandsDir,
   getUserCommandsDir,
-} from '@qwen-code/qwen-code-core';
+} from '@null/null-core';
 import mock from 'mock-fs';
 import { FileCommandLoader } from './FileCommandLoader.js';
 import { assert, vi } from 'vitest';
@@ -52,9 +52,9 @@ vi.mock('./prompt-processors/argumentProcessor.js', async (importOriginal) => {
       .mockImplementation(() => new original.DefaultArgumentProcessor()),
   };
 });
-vi.mock('@qwen-code/qwen-code-core', async (importOriginal) => {
+vi.mock('@null/null-core', async (importOriginal) => {
   const original =
-    await importOriginal<typeof import('@qwen-code/qwen-code-core')>();
+    await importOriginal<typeof import('@null/null-core')>();
   return {
     ...original,
     isCommandAllowed: vi.fn(),

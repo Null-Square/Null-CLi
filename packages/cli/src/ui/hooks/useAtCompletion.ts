@@ -10,7 +10,7 @@ import {
   FileSearch,
   FileSearchFactory,
   escapePath,
-} from '@qwen-code/qwen-code-core';
+} from '@null/null-core';
 import {
   Suggestion,
   MAX_SUGGESTIONS_TO_SHOW,

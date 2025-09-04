@@ -8,11 +8,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as os from 'os';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ShellTool, EditTool, WriteFileTool } from '@qwen-code/qwen-code-core';
+import { ShellTool, EditTool, WriteFileTool } from '@null/null-core';
 import { loadCliConfig, parseArguments, CliArgs } from './config.js';
 import { Settings } from './settings.js';
 import { Extension } from './extension.js';
-import * as ServerConfig from '@qwen-code/qwen-code-core';
+import * as ServerConfig from '@null/null-core';
 import { isWorkspaceTrusted } from './trustedFolders.js';
 
 vi.mock('./trustedFolders.js', () => ({
@@ -37,9 +37,9 @@ vi.mock('read-package-up', () => ({
   ),
 }));
 
-vi.mock('@qwen-code/qwen-code-core', async () => {
+vi.mock('@null/null-core', async () => {
   const actualServer = await vi.importActual<typeof ServerConfig>(
-    '@qwen-code/qwen-code-core',
+    '@null/null-core',
   );
   return {
     ...actualServer,

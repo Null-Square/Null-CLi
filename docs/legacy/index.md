@@ -1,4 +1,4 @@
-# Welcome to Qwen Code documentation
+# Welcome to Qwen Code documentation (Legacy)
 
 This documentation provides a comprehensive guide to installing, using, and developing Qwen Code. This tool lets you interact with AI models through a command-line interface.
 

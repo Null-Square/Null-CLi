@@ -13,12 +13,12 @@ import {
   UserTierId,
   GeminiClient,
   ContentGenerator,
-} from '@qwen-code/qwen-code-core';
+} from '@null/null-core';
 import { OAuth2Client } from 'google-auth-library';
 import { usePrivacySettings } from './usePrivacySettings.js';
 
 // Mock the dependencies
-vi.mock('@qwen-code/qwen-code-core', () => {
+vi.mock('@null/null-core', () => {
   // Mock classes for instanceof checks
   class MockCodeAssistServer {
     projectId = 'test-project-id';

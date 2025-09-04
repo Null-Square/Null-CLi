@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { FileSystemService } from '@qwen-code/qwen-code-core';
+import { FileSystemService } from '@null/null-core';
 import * as acp from './acp.js';
 
 /**

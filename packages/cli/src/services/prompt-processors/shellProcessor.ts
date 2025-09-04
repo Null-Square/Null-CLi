@@ -10,7 +10,7 @@ import {
   escapeShellArg,
   getShellConfiguration,
   ShellExecutionService,
-} from '@qwen-code/qwen-code-core';
+} from '@null/null-core';
 
 import { CommandContext } from '../../ui/commands/types.js';
 import {

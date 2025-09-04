@@ -29,7 +29,7 @@ import {
   ToolInvocation,
   AnyDeclarativeTool,
   AnyToolInvocation,
-} from '@qwen-code/qwen-code-core';
+} from '@null/null-core';
 import {
   HistoryItemWithoutId,
   ToolCallStatus,
@@ -37,8 +37,8 @@ import {
 } from '../types.js';
 
 // Mocks
-vi.mock('@qwen-code/qwen-code-core', async () => {
-  const actual = await vi.importActual('@qwen-code/qwen-code-core');
+vi.mock('@null/null-core', async () => {
+  const actual = await vi.importActual('@null/null-core');
   return {
     ...actual,
     ToolRegistry: vi.fn(),

@@ -13,7 +13,7 @@ import {
   getErrorMessage,
   isNodeError,
   unescapePath,
-} from '@qwen-code/qwen-code-core';
+} from '@null/null-core';
 import {
   HistoryItem,
   IndividualToolCallDisplay,

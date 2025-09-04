@@ -15,7 +15,7 @@ import {
   CommandKind,
   SlashCommandActionReturn,
 } from './types.js';
-import { decodeTagName } from '@qwen-code/qwen-code-core';
+import { decodeTagName } from '@null/null-core';
 import path from 'path';
 import { HistoryItemWithoutId, MessageType } from '../types.js';
 

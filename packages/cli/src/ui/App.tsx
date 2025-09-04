@@ -64,7 +64,7 @@ import {
   AuthType,
   type IdeContext,
   ideContext,
-} from '@qwen-code/qwen-code-core';
+} from '@null/null-core';
 import {
   IdeIntegrationNudge,
   IdeIntegrationNudgeResult,
@@ -92,7 +92,7 @@ import {
   isProQuotaExceededError,
   isGenericQuotaExceededError,
   UserTierId,
-} from '@qwen-code/qwen-code-core';
+} from '@null/null-core';
 import { UpdateObject } from './utils/updateCheck.js';
 import ansiEscapes from 'ansi-escapes';
 import { OverflowProvider } from './contexts/OverflowContext.js';

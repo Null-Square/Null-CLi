@@ -13,7 +13,7 @@ import {
   ReadManyFilesTool,
   StandardFileSystemService,
   ToolRegistry,
-} from '@qwen-code/qwen-code-core';
+} from '@null/null-core';
 import * as os from 'os';
 import { ToolCallStatus } from '../types.js';
 import { UseHistoryManagerReturn } from './useHistoryManager.js';

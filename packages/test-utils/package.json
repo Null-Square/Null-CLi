@@ -1,5 +1,5 @@
 {
-  "name": "@qwen-code/qwen-code-test-utils",
+  "name": "@null/null-test-utils",
   "version": "0.0.10",
   "private": true,
   "main": "src/index.ts",

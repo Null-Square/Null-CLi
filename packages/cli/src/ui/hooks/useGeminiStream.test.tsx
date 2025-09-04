@@ -33,7 +33,7 @@ import {
   GeminiEventType as ServerGeminiEventType,
   AnyToolInvocation,
   ToolErrorType,
-} from '@qwen-code/qwen-code-core';
+} from '@null/null-core';
 import { Part, PartListUnion } from '@google/genai';
 import { UseHistoryManagerReturn } from './useHistoryManager.js';
 import {
@@ -64,7 +64,7 @@ const MockedUserPromptEvent = vi.hoisted(() =>
 );
 const mockParseAndFormatApiError = vi.hoisted(() => vi.fn());
 
-vi.mock('@qwen-code/qwen-code-core', async (importOriginal) => {
+vi.mock('@null/null-core', async (importOriginal) => {
   const actualCoreModule = (await importOriginal()) as any;
   return {
     ...actualCoreModule,

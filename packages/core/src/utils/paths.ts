@@ -6,9 +6,27 @@
 
 import path from 'node:path';
 import os from 'os';
+import { existsSync } from 'fs';
 import * as crypto from 'crypto';
 
-export const QWEN_DIR = '.qwen';
+export const NULL_DIR = '.null';
+function getPreferredSettingsDir(): string {
+  const envNull = process.env['NULL_DIR']?.trim();
+  if (envNull) return envNull;
+  const envQwen = process.env['QWEN_DIR']?.trim();
+  if (envQwen) return envQwen;
+  try {
+    const home = os.homedir();
+    if (existsSync(path.join(home, NULL_DIR))) {
+      return NULL_DIR;
+    }
+  } catch {
+    // ignore and fall back
+  }
+  return '.qwen';
+}
+// Backcompat name; resolved to '.null' when available or env is set
+export const QWEN_DIR = getPreferredSettingsDir();
 export const GOOGLE_ACCOUNTS_FILENAME = 'google_accounts.json';
 const TMP_DIR_NAME = 'tmp';
 const COMMANDS_DIR_NAME = 'commands';

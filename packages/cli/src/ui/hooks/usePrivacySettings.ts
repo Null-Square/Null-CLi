@@ -10,7 +10,7 @@ import {
   CodeAssistServer,
   UserTierId,
   LoggingContentGenerator,
-} from '@qwen-code/qwen-code-core';
+} from '@null/null-core';
 
 export interface PrivacyState {
   isLoading: boolean;

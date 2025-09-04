@@ -1,4 +1,4 @@
-# Package Overview
+# Package Overview (Legacy)
 
 This monorepo contains two main packages: `@qwen-code/qwen-code` and `@qwen-code/qwen-code-core`.
 

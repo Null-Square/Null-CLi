@@ -22,7 +22,7 @@ import {
   ToolCallConfirmationDetails,
   ToolConfirmationOutcome,
   DiscoveredMCPTool,
-} from '@qwen-code/qwen-code-core';
+} from '@null/null-core';
 import { AcpFileSystemService } from './fileSystemService.js';
 import { Content, Part, FunctionCall, PartListUnion } from '@google/genai';
 import * as fs from 'fs/promises';

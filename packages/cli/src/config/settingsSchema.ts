@@ -10,7 +10,7 @@ import {
   TelemetrySettings,
   AuthType,
   ChatCompressionSettings,
-} from '@qwen-code/qwen-code-core';
+} from '@null/null-core';
 import { CustomTheme } from '../ui/themes/theme.js';
 
 export interface SettingDefinition {

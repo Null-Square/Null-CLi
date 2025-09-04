@@ -13,14 +13,14 @@ import {
   getMCPServerStatus,
   getMCPDiscoveryState,
   DiscoveredMCPTool,
-} from '@qwen-code/qwen-code-core';
+} from '@null/null-core';
 
 import { MessageActionReturn } from './types.js';
 import { Type, CallableTool } from '@google/genai';
 
-vi.mock('@qwen-code/qwen-code-core', async (importOriginal) => {
+vi.mock('@null/null-core', async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import('@qwen-code/qwen-code-core')>();
+    await importOriginal<typeof import('@null/null-core')>();
   return {
     ...actual,
     getMCPServerStatus: vi.fn(),
@@ -890,7 +890,7 @@ describe('mcpCommand', () => {
       // Mock the reloadCommands function
       context.ui.reloadCommands = vi.fn();
 
-      const { MCPOAuthProvider } = await import('@qwen-code/qwen-code-core');
+      const { MCPOAuthProvider } = await import('@null/null-core');
 
       const authCommand = mcpCommand.subCommands?.find(
         (cmd) => cmd.name === 'auth',
@@ -926,7 +926,7 @@ describe('mcpCommand', () => {
         },
       });
 
-      const { MCPOAuthProvider } = await import('@qwen-code/qwen-code-core');
+      const { MCPOAuthProvider } = await import('@null/null-core');
       (
         MCPOAuthProvider.authenticate as ReturnType<typeof vi.fn>
       ).mockRejectedValue(new Error('Auth failed'));

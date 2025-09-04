@@ -20,14 +20,14 @@ import {
   Config,
   Config as ActualConfigType,
   ApprovalMode,
-} from '@qwen-code/qwen-code-core';
+} from '@null/null-core';
 import { useKeypress, Key } from './useKeypress.js';
 
 vi.mock('./useKeypress.js');
 
-vi.mock('@qwen-code/qwen-code-core', async () => {
+vi.mock('@null/null-core', async () => {
   const actualServerModule = (await vi.importActual(
-    '@qwen-code/qwen-code-core',
+    '@null/null-core',
   )) as Record<string, unknown>;
   return {
     ...actualServerModule,

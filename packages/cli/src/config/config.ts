@@ -28,7 +28,7 @@ import {
   WriteFileTool,
   MCPServerConfig,
   ConfigParameters,
-} from '@qwen-code/qwen-code-core';
+} from '@null/null-core';
 import { Settings } from './settings.js';
 
 import { Extension, annotateActiveExtensions } from './extension.js';
@@ -84,11 +84,11 @@ export async function parseArguments(): Promise<CliArgs> {
   const yargsInstance = yargs(hideBin(process.argv))
     // Set locale to English for consistent output, especially in tests
     .locale('en')
-    .scriptName('qwen')
+    .scriptName('null')
     .usage(
-      'Usage: qwen [options] [command]\n\nQwen Code - Launch an interactive CLI, use -p/--prompt for non-interactive mode',
+      'Usage: null [options] [command]\n\nNull CLI - Launch an interactive CLI, use -p/--prompt for non-interactive mode',
     )
-    .command('$0', 'Launch Qwen Code', (yargsInstance) =>
+    .command('$0', 'Launch Null CLI', (yargsInstance) =>
       yargsInstance
         .option('model', {
           alias: 'm',

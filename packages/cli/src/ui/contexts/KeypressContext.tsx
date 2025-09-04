@@ -8,7 +8,7 @@ import {
   Config,
   KittySequenceOverflowEvent,
   logKittySequenceOverflow,
-} from '@qwen-code/qwen-code-core';
+} from '@null/null-core';
 import { useStdin } from 'ink';
 import React, {
   createContext,

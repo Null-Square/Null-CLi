@@ -9,7 +9,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as cache from './crawlCache.js';
 import { crawl } from './crawler.js';
-import { createTmpDir, cleanupTmpDir } from '@qwen-code/qwen-code-test-utils';
+import { createTmpDir, cleanupTmpDir } from '@null/null-test-utils';
 import { Ignore, loadIgnoreRules } from './ignore.js';
 
 describe('crawler', () => {

@@ -8,7 +8,7 @@ import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
 import { ConfirmationRequiredError, ShellProcessor } from './shellProcessor.js';
 import { createMockCommandContext } from '../../test-utils/mockCommandContext.js';
 import { CommandContext } from '../../ui/commands/types.js';
-import { ApprovalMode, Config } from '@qwen-code/qwen-code-core';
+import { ApprovalMode, Config } from '@null/null-core';
 import os from 'os';
 import { quote } from 'shell-quote';
 
@@ -34,7 +34,7 @@ function getExpectedEscapedArgForPlatform(arg: string): string {
 const mockCheckCommandPermissions = vi.hoisted(() => vi.fn());
 const mockShellExecute = vi.hoisted(() => vi.fn());
 
-vi.mock('@qwen-code/qwen-code-core', async (importOriginal) => {
+vi.mock('@null/null-core', async (importOriginal) => {
   const original = await importOriginal<object>();
   return {
     ...original,

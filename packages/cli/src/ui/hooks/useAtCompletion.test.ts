@@ -13,12 +13,12 @@ import {
   Config,
   FileSearch,
   FileSearchFactory,
-} from '@qwen-code/qwen-code-core';
+} from '@null/null-core';
 import {
   createTmpDir,
   cleanupTmpDir,
   FileSystemStructure,
-} from '@qwen-code/qwen-code-test-utils';
+} from '@null/null-test-utils';
 import { useState } from 'react';
 import { Suggestion } from '../components/SuggestionsDisplay.js';
 

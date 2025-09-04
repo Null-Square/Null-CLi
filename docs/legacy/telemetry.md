@@ -1,4 +1,4 @@
-# Qwen Code Observability Guide
+# Qwen Code Observability Guide (Legacy)
 
 Telemetry provides data about Qwen Code's performance, health, and usage. By enabling it, you can monitor operations, debug issues, and optimize tool usage through traces, metrics, and structured logs.
 

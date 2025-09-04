@@ -26,6 +26,15 @@ if (!process.cwd().includes('packages')) {
   process.exit(1);
 }
 
+// ensure generated files exist (e.g., git-commit.ts used by packages)
+try {
+  execSync('node ../../scripts/generate-git-commit-info.js', {
+    stdio: 'inherit',
+  });
+} catch (e) {
+  // non-fatal; proceed to build
+}
+
 // build typescript files
 execSync('tsc --build', { stdio: 'inherit' });
 

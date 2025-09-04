@@ -10,20 +10,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
-# Set up npm global package folder
-RUN mkdir -p /usr/local/share/npm-global
-ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
-ENV PATH=$PATH:/usr/local/share/npm-global/bin
+# Enable pnpm via corepack
+RUN corepack enable && corepack prepare pnpm@10.15.1 --activate
 
 # Copy source code
 COPY . /home/node/app
 WORKDIR /home/node/app
 
-# Install dependencies and build packages
-RUN npm ci \
-  && npm run build --workspaces \
-  && npm pack -w @null/null-cli --pack-destination ./packages/cli/dist \
-  && npm pack -w @null/null-core --pack-destination ./packages/core/dist
+# Install dependencies and build packages with pnpm
+RUN pnpm install \
+  && pnpm -r build \
+  && bash -lc 'cd packages/cli && pnpm pack && mkdir -p dist && mv *.tgz dist/' \
+  && bash -lc 'cd packages/core && pnpm pack && mkdir -p dist && mv *.tgz dist/'
 
 # Runtime stage
 FROM docker.io/library/node:20-slim
@@ -55,10 +53,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
-# Set up npm global package folder
-RUN mkdir -p /usr/local/share/npm-global
-ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
-ENV PATH=$PATH:/usr/local/share/npm-global/bin
+# Using npm in runtime layer for global install is fine
 
 # Copy built packages from builder stage
 COPY --from=builder /home/node/app/packages/cli/dist/*.tgz /tmp/

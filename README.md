@@ -74,6 +74,50 @@ Null is for security research and authorized testing only. Ensure you have expli
 
 See `AGENT.md` for development guidelines and conventions for working in this repo.
 
+## Docker
+
+Build the image locally:
+
+```bash
+docker build -t null-cli:local .
+```
+
+Quick version check:
+
+```bash
+docker run --rm -it null-cli:local null --version
+```
+
+Run the CLI with your project mounted as the working directory:
+
+- macOS/Linux (bash/zsh):
+
+```bash
+docker run --rm -it \
+  -v "$(pwd)":/workspace \
+  -w /workspace \
+  null-cli:local null
+```
+
+- Windows (PowerShell):
+
+```powershell
+docker run --rm -it `
+  -v "${PWD}:/workspace" `
+  -w /workspace `
+  null-cli:local null
+```
+
+Optional: pass environment variables (e.g., config dir, proxies):
+
+```bash
+docker run --rm -it \
+  -e NULL_DIR=/workspace/.null \
+  -e HTTP_PROXY=... -e HTTPS_PROXY=... \
+  -v "$(pwd)":/workspace -w /workspace \
+  null-cli:local null
+```
+
 ## Brand Identity
 
 - Primary: Black `#000000`
@@ -99,3 +143,4 @@ Then select “Null Dark” (default) or “Null Light”.
 ```
 
 Choose Theme → “Null Dark” or “Null Light”.
+Note: The repo includes a `.dockerignore` that excludes `node_modules/` and other local artifacts to keep the build context small and avoid Windows/NTFS metadata issues.

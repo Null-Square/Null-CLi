@@ -22,7 +22,7 @@ hf login  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
 hf download `
   --repo-type model `
   huihui-ai/DeepSeek-R1-Distill-Qwen-1.5B-abliterated `
-  --local-dir .\models\deepseek-r1-8B `
+  --local-dir .\models\deepseek-r1-1.5B `
   --local-dir-use-symlinks False
 
 docker run --rm -it `
@@ -31,8 +31,8 @@ docker run --rm -it `
   -p 8000:8000 `
   -v ${PWD}\models:/models `
   vllm/vllm-openai:latest `
-  --model /models/deepseek-r1-8B `
-  --served-model-name deepseek-r1-8B `
+  --model /models/deepseek-r1-1.5B `
+  --served-model-name deepseek-r1-1.5B `
   --host 0.0.0.0 `
   --port 8000 `
   --trust-remote-code `
@@ -63,7 +63,7 @@ docker run --rm -it `
   -e HUGGING_FACE_HUB_TOKEN=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`
   vllm/vllm-openai:latest `
   --model huihui-ai/DeepSeek-R1-Distill-Qwen-1.5B-abliterated `
-  --served-model-name deepseek-r1 `
+  --served-model-name deepseek-r1-1.5B `
   --host 0.0.0.0 `
   --port 8000 `
   --trust-remote-code `

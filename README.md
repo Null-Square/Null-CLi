@@ -72,7 +72,7 @@ $env:NULL_EXPERIMENTAL_LOCAL = 1
 
 2) In Null CLI, run `/auth` and select “Local DeepSeek (OpenAI-compatible)”. Enter:
 - Base URL: `http://localhost:8000/v1`
-- Model: `deepseek-r1` (must match `--served-model-name`)
+- Model: `deepseek-r1-1.5B` (must match `--served-model-name`)
 - API key: leave empty (localhost allowed)
 
 Troubleshooting:

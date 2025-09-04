@@ -59,6 +59,27 @@ Global install (deferred):
 
 - Not configured yet for publish under the `@null/*` scope. Once branding and features are stable, npm publish workflows will be updated.
 
+## Configure Null CLI
+
+1) Enable the experimental local option (if not already visible):
+
+```bash
+# Bash
+export NULL_EXPERIMENTAL_LOCAL=1
+# PowerShell
+$env:NULL_EXPERIMENTAL_LOCAL = 1
+```
+
+2) In Null CLI, run `/auth` and select “Local DeepSeek (OpenAI-compatible)”. Enter:
+- Base URL: `http://localhost:8000/v1`
+- Model: `deepseek-r1` (must match `--served-model-name`)
+- API key: leave empty (localhost allowed)
+
+Troubleshooting:
+- If requests time out, reduce context size or increase server/model timeout.
+- Ensure the model name matches what your server advertises.
+- Some repos require `--trust-remote-code` on vLLM.
+
 ## Roadmap (High-level)
 
 - Pentest tooling execution (Nmap, Gobuster, SQLMap, etc.)
@@ -117,6 +138,14 @@ docker run --rm -it \
   -v "$(pwd)":/workspace -w /workspace \
   null-cli:local null
 ```
+
+
+
+
+Notes:
+- For non-local Base URLs, an API key is still required.
+- If your server enforces Authorization, provide any token and configure it to accept it.
+- See also: `docs/local-deepseek.md` for compose and llama.cpp options.
 
 ## Brand Identity
 

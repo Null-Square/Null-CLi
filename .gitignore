@@ -48,3 +48,6 @@ packages/vscode-ide-companion/*.vsix
 logs/
 # GHA credentials
 gha-creds-*.json
+
+# Local model weights (do not commit)
+models/

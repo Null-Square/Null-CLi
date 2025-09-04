@@ -2,11 +2,10 @@
 .env
 .env~
 
-# gemini-cli settings
-.gemini/
-!gemini/config.yaml
-
-# Note: .gemini-clipboard/ is NOT in gitignore so Gemini can access pasted images
+# Legacy Gemini settings (no longer used)
+# .gemini/
+# !gemini/config.yaml
+# Note: .gemini-clipboard/ intentionally not ignored previously; deprecated
 
 # Dependency directory
 node_modules
@@ -44,6 +43,8 @@ packages/vscode-ide-companion/*.vsix
 
 # Null CLI Configs
 .null/
+# Back-compat: avoid committing legacy Qwen config if present
+.qwen/
 logs/
 # GHA credentials
 gha-creds-*.json

@@ -74,3 +74,28 @@ Null is for security research and authorized testing only. Ensure you have expli
 
 See `AGENT.md` for development guidelines and conventions for working in this repo.
 
+## Brand Identity
+
+- Primary: Black `#000000`
+- Accent: Gold `#FFD900`
+- Style: Minimalist, high-contrast, sharp corners; assertive, all-caps headlines where appropriate
+
+## Theme Selection (Null Light/Dark)
+
+You can switch between built-in Null themes inside the CLI:
+
+1) Use the theme command
+
+```bash
+/theme
+```
+
+Then select “Null Dark” (default) or “Null Light”.
+
+2) Or set in settings dialog
+
+```bash
+/settings
+```
+
+Choose Theme → “Null Dark” or “Null Light”.

@@ -83,23 +83,23 @@ if (!argv.s) {
   execSync('npm run build --workspaces', { stdio: 'inherit' });
 }
 
-console.log('packing @qwen-code/qwen-code ...');
+console.log('packing @null/null-cli ...');
 const cliPackageDir = join('packages', 'cli');
-rmSync(join(cliPackageDir, 'dist', 'qwen-code-*.tgz'), { force: true });
+rmSync(join(cliPackageDir, 'dist', 'null-cli-*.tgz'), { force: true });
 execSync(
-  `npm pack -w @qwen-code/qwen-code --pack-destination ./packages/cli/dist`,
+  `npm pack -w @null/null-cli --pack-destination ./packages/cli/dist`,
   {
     stdio: 'ignore',
   },
 );
 
-console.log('packing @qwen-code/qwen-code-core ...');
+console.log('packing @null/null-core ...');
 const corePackageDir = join('packages', 'core');
-rmSync(join(corePackageDir, 'dist', 'qwen-code-core-*.tgz'), {
+rmSync(join(corePackageDir, 'dist', 'null-core-*.tgz'), {
   force: true,
 });
 execSync(
-  `npm pack -w @qwen-code/qwen-code-core --pack-destination ./packages/core/dist`,
+  `npm pack -w @null/null-core --pack-destination ./packages/core/dist`,
   { stdio: 'ignore' },
 );
 
@@ -107,18 +107,8 @@ const packageVersion = JSON.parse(
   readFileSync(join(process.cwd(), 'package.json'), 'utf-8'),
 ).version;
 
-chmodSync(
-  join(cliPackageDir, 'dist', `qwen-code-qwen-code-${packageVersion}.tgz`),
-  0o755,
-);
-chmodSync(
-  join(
-    corePackageDir,
-    'dist',
-    `qwen-code-qwen-code-core-${packageVersion}.tgz`,
-  ),
-  0o755,
-);
+// note: package tar names depend on npm's pack naming; adjust if needed
+// note: see above
 
 const buildStdout = process.env.VERBOSE ? 'inherit' : 'ignore';
 

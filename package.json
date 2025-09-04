@@ -1,5 +1,5 @@
 {
-  "name": "@qwen-code/qwen-code",
+  "name": "@null/monorepo",
   "version": "0.0.10",
   "engines": {
     "node": ">=20.0.0"
@@ -10,10 +10,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/QwenLM/qwen-code.git"
+    "url": "git+https://github.com/your-org/null-cli.git"
   },
   "config": {
-    "sandboxImageUri": "ghcr.io/qwenlm/qwen-code:0.0.10"
+    "sandboxImageUri": "ghcr.io/nullsec/null-cli:0.0.10"
   },
   "scripts": {
     "start": "node scripts/start.js",
@@ -50,7 +50,7 @@
     "clean": "node scripts/clean.js"
   },
   "bin": {
-    "qwen": "bundle/gemini.js"
+    "null": "bundle/null.js"
   },
   "files": [
     "bundle/",

@@ -11,7 +11,7 @@ export const helpCommand: SlashCommand = {
   name: 'help',
   altNames: ['?'],
   kind: CommandKind.BUILT_IN,
-  description: 'for help on Qwen Code',
+  description: 'FOR HELP ON NULL CLI',
   action: async (context) => {
     const helpItem: Omit<HistoryItemHelp, 'id'> = {
       type: MessageType.HELP,

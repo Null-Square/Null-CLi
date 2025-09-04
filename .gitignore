@@ -42,8 +42,8 @@ packages/core/src/generated/
 .integration-tests/
 packages/vscode-ide-companion/*.vsix
 
-# Qwen Code Configs
-.qwen/
+# Null CLI Configs
+.null/
 logs/
 # GHA credentials
 gha-creds-*.json

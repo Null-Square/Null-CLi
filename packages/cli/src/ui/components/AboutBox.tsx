@@ -29,7 +29,7 @@ export const AboutBox: React.FC<AboutBoxProps> = ({
   ideClient,
 }) => (
   <Box
-    borderStyle="round"
+    borderStyle="single"
     borderColor={Colors.Gray}
     flexDirection="column"
     padding={1}
@@ -38,7 +38,7 @@ export const AboutBox: React.FC<AboutBoxProps> = ({
   >
     <Box marginBottom={1}>
       <Text bold color={Colors.AccentPurple}>
-        About Null
+        ABOUT NULL
       </Text>
     </Box>
     <Box flexDirection="row">

@@ -14,7 +14,7 @@ Prerequisites:
 Install and build:
 
 ```bash
-pnpm install --ignore-scripts
+pnpm install 
 pnpm -r build
 ```
 

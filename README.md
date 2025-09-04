@@ -50,7 +50,7 @@ pnpm --filter @null/null-cli start -- --version
 Local workspace (recommended during development):
 
 ```bash
-pnpm install --ignore-scripts
+pnpm install 
 pnpm -r build
 pnpm --filter @null/null-cli start
 ```
@@ -143,13 +143,3 @@ Then select “Null Dark” (default) or “Null Light”.
 ```
 
 Choose Theme → “Null Dark” or “Null Light”.
-Note: The repo includes a `.dockerignore` that excludes `node_modules/` and other local artifacts to keep the build context small and avoid Windows/NTFS metadata issues.
-
-Faster builds: this Dockerfile uses pnpm fetch caching and BuildKit cache mounts. With Docker Desktop (BuildKit is default), subsequent builds will reuse the dependency store.
-
-If needed, enable BuildKit explicitly:
-
-```bash
-export DOCKER_BUILDKIT=1
-docker build -t null-cli:local .
-```

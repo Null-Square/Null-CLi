@@ -37,6 +37,14 @@ services:
       - NULL_EXPERIMENTAL_LOCAL=1
       - OPENAI_BASE_URL=http://deepseek:8000/v1
       - OPENAI_MODEL=deepseek-r1
+    # To connect to Ollama on the HOST instead of the deepseek service:
+    #   - Uncomment extra_hosts below (Linux), and update OPENAI_BASE_URL
+    # extra_hosts:
+    #   - "host.docker.internal:host-gateway"  # Linux only; on Windows/macOS this is built-in
+    # environment:
+    #   - NULL_EXPERIMENTAL_LOCAL=1
+    #   - OPENAI_BASE_URL=http://host.docker.internal:11434/v1
+    #   - OPENAI_MODEL=llama3.1:8b  # or your Ollama model name
     working_dir: /workspace
     volumes:
       - ./:/workspace
@@ -47,4 +55,3 @@ services:
 volumes:
   hf-cache:
     driver: local
-

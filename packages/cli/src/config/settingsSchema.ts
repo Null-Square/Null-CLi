@@ -568,6 +568,16 @@ export const SETTINGS_SCHEMA = {
     description: 'Enable OpenAI logging.',
     showInDialog: true,
   },
+  openaiProfiles: {
+    type: 'object',
+    label: 'OpenAI-Compatible Profiles',
+    category: 'General',
+    requiresRestart: false,
+    default: {} as Record<string, { baseUrl: string; model: string; apiKey?: string }>,
+    description:
+      'Named profiles for OpenAI-compatible connections (e.g., Ollama/vLLM). Each profile may include baseUrl, model, and optional apiKey.',
+    showInDialog: false,
+  },
   sessionTokenLimit: {
     type: 'number',
     label: 'Session Token Limit',

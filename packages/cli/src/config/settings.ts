@@ -19,7 +19,9 @@ import { Settings, MemoryImportFormat } from './settingsSchema.js';
 
 export type { Settings, MemoryImportFormat };
 
-export const SETTINGS_DIRECTORY_NAME = '.qwen';
+// Null-branded settings directory; keep legacy '.qwen' fallback when reading
+export const SETTINGS_DIRECTORY_NAME = '.null';
+const LEGACY_SETTINGS_DIRECTORY_NAME = '.qwen';
 export const USER_SETTINGS_DIR = path.join(homedir(), SETTINGS_DIRECTORY_NAME);
 export const USER_SETTINGS_PATH = path.join(USER_SETTINGS_DIR, 'settings.json');
 export const DEFAULT_EXCLUDED_ENV_VARS = ['DEBUG', 'DEBUG_MODE'];
@@ -39,6 +41,10 @@ export function getSystemSettingsPath(): string {
 
 export function getWorkspaceSettingsPath(workspaceDir: string): string {
   return path.join(workspaceDir, SETTINGS_DIRECTORY_NAME, 'settings.json');
+}
+
+function getLegacyWorkspaceSettingsPath(workspaceDir: string): string {
+  return path.join(workspaceDir, LEGACY_SETTINGS_DIRECTORY_NAME, 'settings.json');
 }
 
 export type { DnsResolutionOrder } from './settingsSchema.js';
@@ -93,6 +99,11 @@ function mergeSettings(
       ...(user.mcpServers || {}),
       ...(workspace.mcpServers || {}),
       ...(system.mcpServers || {}),
+    },
+    openaiProfiles: {
+      ...(user.openaiProfiles || {}),
+      ...(workspace.openaiProfiles || {}),
+      ...(system.openaiProfiles || {}),
     },
     includeDirectories: [
       ...(system.includeDirectories || []),
@@ -343,6 +354,7 @@ export function loadSettings(workspaceDir: string): LoadedSettings {
   const realHomeDir = fs.realpathSync(resolvedHomeDir);
 
   const workspaceSettingsPath = getWorkspaceSettingsPath(workspaceDir);
+  const legacyWorkspaceSettingsPath = getLegacyWorkspaceSettingsPath(workspaceDir);
 
   // Load system settings
   try {
@@ -368,6 +380,23 @@ export function loadSettings(workspaceDir: string): LoadedSettings {
       } else if (userSettings.theme && userSettings.theme === 'VS2015') {
         userSettings.theme = DefaultDark.name;
       }
+    } else {
+      // Migration fallback: legacy '~/.qwen/settings.json'
+      const legacyUserDir = path.join(homedir(), LEGACY_SETTINGS_DIRECTORY_NAME);
+      const legacyUserPath = path.join(legacyUserDir, 'settings.json');
+      if (fs.existsSync(legacyUserPath)) {
+        try {
+          const legacyUserContent = fs.readFileSync(legacyUserPath, 'utf-8');
+          userSettings = JSON.parse(stripJsonComments(legacyUserContent)) as Settings;
+          if (userSettings.theme && userSettings.theme === 'VS') {
+            userSettings.theme = DefaultLight.name;
+          } else if (userSettings.theme && userSettings.theme === 'VS2015') {
+            userSettings.theme = DefaultDark.name;
+          }
+        } catch (e) {
+          settingsErrors.push({ message: getErrorMessage(e), path: legacyUserPath });
+        }
+      }
     }
   } catch (error: unknown) {
     settingsErrors.push({
@@ -391,6 +420,30 @@ export function loadSettings(workspaceDir: string): LoadedSettings {
           workspaceSettings.theme === 'VS2015'
         ) {
           workspaceSettings.theme = DefaultDark.name;
+        }
+      } else if (fs.existsSync(legacyWorkspaceSettingsPath)) {
+        // Migration fallback: legacy './.qwen/settings.json'
+        try {
+          const legacyProjectContent = fs.readFileSync(
+            legacyWorkspaceSettingsPath,
+            'utf-8',
+          );
+          workspaceSettings = JSON.parse(
+            stripJsonComments(legacyProjectContent),
+          ) as Settings;
+          if (workspaceSettings.theme && workspaceSettings.theme === 'VS') {
+            workspaceSettings.theme = DefaultLight.name;
+          } else if (
+            workspaceSettings.theme &&
+            workspaceSettings.theme === 'VS2015'
+          ) {
+            workspaceSettings.theme = DefaultDark.name;
+          }
+        } catch (e) {
+          settingsErrors.push({
+            message: getErrorMessage(e),
+            path: legacyWorkspaceSettingsPath,
+          });
         }
       }
     } catch (error: unknown) {

@@ -46,6 +46,7 @@ export function AuthDialog({
     initialErrorMessage || null,
   );
   const [showOpenAIKeyPrompt, setShowOpenAIKeyPrompt] = useState(false);
+  const [showOpenAIProfileSelect, setShowOpenAIProfileSelect] = useState(false);
   const items = [
     { label: 'Qwen OAuth', value: AuthType.QWEN_OAUTH },
     { label: 'OpenAI', value: AuthType.USE_OPENAI },
@@ -74,12 +75,21 @@ export function AuthDialog({
   );
 
   const handleAuthSelect = (authMethod: AuthType) => {
+    // If OpenAI-compatible and profiles are present, show profile selection first
+    if (authMethod === AuthType.USE_OPENAI) {
+      const profiles = settings.merged.openaiProfiles as
+        | Record<string, { baseUrl?: string; model?: string; apiKey?: string }>
+        | undefined;
+      if (profiles && Object.keys(profiles).length > 0) {
+        setShowOpenAIProfileSelect(true);
+        setErrorMessage(null);
+        return;
+      }
+    }
+
     const error = validateAuthMethod(authMethod);
     if (error) {
-      if (
-        authMethod === AuthType.USE_OPENAI &&
-        !process.env['OPENAI_API_KEY']
-      ) {
+      if (authMethod === AuthType.USE_OPENAI && !process.env['OPENAI_API_KEY']) {
         setShowOpenAIKeyPrompt(true);
         setErrorMessage(null);
       } else {
@@ -106,6 +116,26 @@ export function AuthDialog({
   const handleOpenAIKeyCancel = () => {
     setShowOpenAIKeyPrompt(false);
     setErrorMessage('OpenAI API key is required to use OpenAI authentication.');
+  };
+
+  const handleOpenAIProfileSelect = (profileName: string) => {
+    const profiles = (settings.merged.openaiProfiles || {}) as Record<
+      string,
+      { baseUrl?: string; model?: string; apiKey?: string }
+    >;
+    const profile = profiles[profileName] || {};
+    if (profile.apiKey !== undefined) {
+      setOpenAIApiKey(profile.apiKey);
+    }
+    if (profile.baseUrl) {
+      setOpenAIBaseUrl(profile.baseUrl);
+    }
+    if (profile.model) {
+      setOpenAIModel(profile.model);
+    }
+    setShowOpenAIProfileSelect(false);
+    // Bypass validateAuth to allow local/blank API keys (same as interactive entry)
+    onSelect(AuthType.USE_OPENAI, SettingScope.User);
   };
 
   useKeypress(
@@ -139,6 +169,42 @@ export function AuthDialog({
         onSubmit={handleOpenAIKeySubmit}
         onCancel={handleOpenAIKeyCancel}
       />
+    );
+  }
+
+  if (showOpenAIProfileSelect) {
+    const profiles = settings.merged.openaiProfiles as
+      | Record<string, { baseUrl?: string; model?: string; apiKey?: string }>
+      | undefined;
+    const items = [
+      ...Object.keys(profiles || {}).map((name) => ({
+        label: name,
+        value: name,
+      })),
+      { label: 'Custom…', value: '__custom__' },
+    ];
+
+    return (
+      <Box borderStyle="round" borderColor={Colors.Gray} flexDirection="column" padding={1} width="100%">
+        <Text bold>Select OpenAI-Compatible Profile</Text>
+        <Box marginTop={1}>
+          <RadioButtonSelect
+            items={items}
+            initialIndex={0}
+            onSelect={(val) => {
+              if (val === '__custom__') {
+                setShowOpenAIProfileSelect(false);
+                setShowOpenAIKeyPrompt(true);
+              } else {
+                handleOpenAIProfileSelect(val);
+              }
+            }}
+          />
+        </Box>
+        <Box marginTop={1}>
+          <Text color={Colors.AccentPurple}>(Use Enter to select)</Text>
+        </Box>
+      </Box>
     );
   }
 

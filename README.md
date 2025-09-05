@@ -142,10 +142,36 @@ docker run --rm -it \
 
 
 
+Connect to Ollama on the host from inside Docker:
+
+- Windows/macOS:
+
+```powershell
+docker run --rm -it `
+  -e NULL_EXPERIMENTAL_LOCAL=1 `
+  -e OPENAI_BASE_URL=http://host.docker.internal:11434/v1 `
+  -e OPENAI_MODEL=llama3.1:8b `
+  -v "${PWD}:/workspace" -w /workspace `
+  null-cli:local null
+```
+
+- Linux (Docker 20.10+):
+
+```bash
+docker run --rm -it \
+  --add-host=host.docker.internal:host-gateway \
+  -e NULL_EXPERIMENTAL_LOCAL=1 \
+  -e OPENAI_BASE_URL=http://host.docker.internal:11434/v1 \
+  -e OPENAI_MODEL=llama3.1:8b \
+  -v "$(pwd)":/workspace -w /workspace \
+  null-cli:local null
+```
+
 Notes:
 - For non-local Base URLs, an API key is still required.
 - If your server enforces Authorization, provide any token and configure it to accept it.
 - See also: `docs/local-deepseek.md` for compose and llama.cpp options.
+  And `docs/ollama.md` for Ollama setup and host/Docker networking tips.
 
 ## Brand Identity
 

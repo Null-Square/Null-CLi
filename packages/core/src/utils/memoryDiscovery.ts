@@ -131,6 +131,8 @@ async function getGeminiMdFilePathsInternalForEachDir(
       GEMINI_CONFIG_DIR,
       geminiMdFilename,
     );
+    // Legacy fallback directory
+    const legacyGlobalMemoryPath = path.join(resolvedHome, '.qwen', geminiMdFilename);
 
     // This part that finds the global file always runs.
     try {
@@ -142,6 +144,17 @@ async function getGeminiMdFilePathsInternalForEachDir(
         );
     } catch {
       // It's okay if it's not found.
+    }
+    // Also check legacy global path for backward compatibility
+    try {
+      await fs.access(legacyGlobalMemoryPath, fsSync.constants.R_OK);
+      allPaths.add(legacyGlobalMemoryPath);
+      if (debugMode)
+        logger.debug(
+          `Found legacy global ${geminiMdFilename}: ${legacyGlobalMemoryPath}`,
+        );
+    } catch {
+      // ignore if not found
     }
 
     // Handle the case where we're in the home directory (dir is empty string or home path)

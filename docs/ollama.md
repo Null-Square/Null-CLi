@@ -1,4 +1,4 @@
-# Ollama (OpenAI-compatible) Setup
+﻿# Ollama (OpenAI-compatible) Setup
 
 Use Ollama to run local models and connect Null CLI over an OpenAI-compatible HTTP API. This works whether Null runs on your host or inside Docker.
 
@@ -24,20 +24,13 @@ Note: Model names vary; use `ollama list` to see what you have locally.
 
 ## Configure Null CLI
 
-Inside Null CLI, run `/auth` and choose the OpenAI-compatible option (named “Local DeepSeek (OpenAI-compatible)” in current UI). Enter:
+Inside Null CLI, run `/auth` and choose the OpenAI-compatible option (named â€œLocal DeepSeek (OpenAI-compatible)â€ in current UI). Enter:
 
 - Base URL: `http://localhost:11434/v1`
 - Model: the exact Ollama model name (e.g., `llama3.1:8b`) use `ollama list`
 - API key: any non-empty value if required by your setup; most local Ollama installs accept any token. You can leave it blank if not required.
 
-Tip: You can also set environment variables before launching Null:
 
-```powershell
-# PowerShell
-$env:NULL_EXPERIMENTAL_LOCAL = 1
-$env:OPENAI_BASE_URL = "http://localhost:11434/v1"
-$env:OPENAI_MODEL = "llama3.1:8b"
-```
 
 ## Use Null CLI in Docker, Connect to Host Ollama
 
@@ -57,15 +50,7 @@ docker run --rm -it `
   -v "${PWD}:/workspace" -w /workspace `
   null-cli:local null
 
-# Linux - add host-gateway alias (Docker 20.10+)
-docker run --rm -it \
-  --add-host=host.docker.internal:host-gateway \
-  -e NULL_EXPERIMENTAL_LOCAL=1 \
-  -e OPENAI_BASE_URL=http://host.docker.internal:11434/v1 \
-  -e OPENAI_MODEL=llama3.1:8b \
-  -v "$(pwd)":/workspace -w /workspace \
-  null-cli:local null
-```
+
 
 docker-compose.yml tip (Linux):
 
@@ -82,7 +67,8 @@ services:
 
 ## Security Notes
 
-- Ollama’s API is local by default and typically unauthenticated. Do not expose `11434` to untrusted networks.
+- Ollamaâ€™s API is local by default and typically unauthenticated. Do not expose `11434` to untrusted networks.
 - For remote access, front Ollama with a reverse proxy that adds auth (e.g., Caddy/Traefik/Nginx) or use a secure tunnel/VPN.
 - If you put Ollama behind an OpenAI-compatible proxy, set `OPENAI_BASE_URL` to that proxy instead.
+
 

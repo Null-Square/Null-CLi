@@ -47,9 +47,10 @@ export function AuthDialog({
   );
   const [showOpenAIKeyPrompt, setShowOpenAIKeyPrompt] = useState(false);
   const [showOpenAIProfileSelect, setShowOpenAIProfileSelect] = useState(false);
+  // Reorder and relabel: show generic API (OpenAI-compatible) first
   const items = [
+    { label: 'API', value: AuthType.USE_OPENAI },
     { label: 'Qwen OAuth', value: AuthType.QWEN_OAUTH },
-    { label: 'OpenAI', value: AuthType.USE_OPENAI },
   ];
 
   const initialAuthIndex = Math.max(
@@ -115,7 +116,7 @@ export function AuthDialog({
 
   const handleOpenAIKeyCancel = () => {
     setShowOpenAIKeyPrompt(false);
-    setErrorMessage('OpenAI API key is required to use OpenAI authentication.');
+    setErrorMessage('API key is required to use API authentication.');
   };
 
   const handleOpenAIProfileSelect = (profileName: string) => {
@@ -186,7 +187,7 @@ export function AuthDialog({
 
     return (
       <Box borderStyle="round" borderColor={Colors.Gray} flexDirection="column" padding={1} width="100%">
-        <Text bold>Select OpenAI-Compatible Profile</Text>
+        <Text bold>Select API Profile</Text>
         <Box marginTop={1}>
           <RadioButtonSelect
             items={items}
@@ -235,14 +236,7 @@ export function AuthDialog({
       <Box marginTop={1}>
         <Text color={Colors.AccentPurple}>(Use Enter to Set Auth)</Text>
       </Box>
-      <Box marginTop={1}>
-        <Text>Terms of Services and Privacy Notice for Qwen Code</Text>
-      </Box>
-      <Box marginTop={1}>
-        <Text color={Colors.AccentBlue}>
-          {'https://github.com/QwenLM/Qwen3-Coder/blob/main/README.md'}
-        </Text>
-      </Box>
+      {/* Legal section removed for Null branding; add back when Null ToS is ready */}
     </Box>
   );
 }

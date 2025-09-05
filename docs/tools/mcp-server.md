@@ -1,4 +1,4 @@
-# MCP servers with Qwen Code
+﻿# MCP servers with Qwen Code
 
 This document provides a guide to configuring and using Model Context Protocol (MCP) servers with Qwen Code.
 
@@ -51,7 +51,7 @@ Qwen Code uses the `mcpServers` configuration in your `settings.json` file to lo
 
 ### Configure the MCP server in settings.json
 
-You can configure MCP servers at the global level in the `~/.qwen/settings.json` file or in your project's root directory, create or open the `.qwen/settings.json` file. Within the file, add the `mcpServers` configuration block.
+You can configure MCP servers at the global level in the `~/.null/settings.json (legacy: ~/./.null/settings.json (legacy: ./.qwen/settings.json))` file or in your project's root directory, create or open the `./.null/settings.json (legacy: ./.qwen/settings.json)` file. Within the file, add the `mcpServers` configuration block.
 
 ### Configuration Structure
 
@@ -320,9 +320,9 @@ For each configured server in `mcpServers`:
 
 1. **Status tracking begins:** Server status is set to `CONNECTING`
 2. **Transport selection:** Based on configuration properties:
-   - `httpUrl` → `StreamableHTTPClientTransport`
-   - `url` → `SSEClientTransport`
-   - `command` → `StdioClientTransport`
+   - `httpUrl` â†’ `StreamableHTTPClientTransport`
+   - `url` â†’ `SSEClientTransport`
+   - `command` â†’ `StdioClientTransport`
 3. **Connection establishment:** The MCP client attempts to connect with the configured timeout
 4. **Error handling:** Connection failures are logged and the server status is set to `DISCONNECTED`
 
@@ -389,8 +389,8 @@ if (this.trust) {
 
 The system maintains internal allow-lists for:
 
-- **Server-level:** `serverName` → All tools from this server are trusted
-- **Tool-level:** `serverName.toolName` → This specific tool is trusted
+- **Server-level:** `serverName` â†’ All tools from this server are trusted
+- **Tool-level:** `serverName.toolName` â†’ This specific tool is trusted
 
 #### User Choice Handling
 
@@ -449,17 +449,17 @@ This displays:
 ```
 MCP Servers Status:
 
-📡 pythonTools (CONNECTED)
+ðŸ“¡ pythonTools (CONNECTED)
   Command: python -m my_mcp_server --port 8080
   Working Directory: ./mcp-servers/python
   Timeout: 15000ms
   Tools: calculate_sum, file_analyzer, data_processor
 
-🔌 nodeServer (DISCONNECTED)
+ðŸ”Œ nodeServer (DISCONNECTED)
   Command: node dist/server.js --verbose
   Error: Connection refused
 
-🐳 dockerizedServer (CONNECTED)
+ðŸ³ dockerizedServer (CONNECTED)
   Command: docker run -i --rm -e API_KEY my-mcp-server:latest
   Tools: docker__deploy, docker__status
 
@@ -695,7 +695,7 @@ While you can always configure MCP servers by manually editing your `settings.js
 
 ### Adding a Server (`qwen mcp add`)
 
-The `add` command configures a new MCP server in your `settings.json`. Based on the scope (`-s, --scope`), it will be added to either the user config `~/.qwen/settings.json` or the project config `.qwen/settings.json` file.
+The `add` command configures a new MCP server in your `settings.json`. Based on the scope (`-s, --scope`), it will be added to either the user config `~/.null/settings.json (legacy: ~/./.null/settings.json (legacy: ./.qwen/settings.json))` or the project config `./.null/settings.json (legacy: ./.qwen/settings.json)` file.
 
 **Command:**
 
@@ -777,9 +777,9 @@ qwen mcp list
 **Example Output:**
 
 ```sh
-✓ stdio-server: command: python3 server.py (stdio) - Connected
-✓ http-server: https://api.example.com/mcp (http) - Connected
-✗ sse-server: https://api.example.com/sse (sse) - Disconnected
+âœ“ stdio-server: command: python3 server.py (stdio) - Connected
+âœ“ http-server: https://api.example.com/mcp (http) - Connected
+âœ— sse-server: https://api.example.com/sse (sse) - Disconnected
 ```
 
 ### Removing a Server (`qwen mcp remove`)
@@ -799,3 +799,4 @@ qwen mcp remove my-server
 ```
 
 This will find and delete the "my-server" entry from the `mcpServers` object in the appropriate `settings.json` file based on the scope (`-s, --scope`).
+

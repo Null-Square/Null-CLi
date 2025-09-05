@@ -30,6 +30,11 @@ Check version:
 pnpm --filter @null/null-cli start -- --version
 ```
 
+Global install (deferred):
+
+- Not configured yet for publish under the `@null/*` scope. Once branding and features are stable, npm publish workflows will be updated.
+
+
 ## Project Structure
 
 - `packages/cli`: Null CLI app (bin: `null`)
@@ -45,47 +50,16 @@ pnpm --filter @null/null-cli start -- --version
 - Rename: CLI/core/test-utils packages migrated to `@null/*`
 - Docs: This README and `NULL.md` are added; legacy content will be refactored progressively
 
-## Installation Options
 
-Local workspace (recommended during development):
+## Configure Null CLI With Agent
 
-```bash
-pnpm install 
-pnpm -r build
-pnpm --filter @null/null-cli start
-```
 
-Global install (deferred):
+1) In Null CLI, run `/auth` and select “API”. Enter:
+- You will see list of modles that are available.
+- To add more to the list add them to ./null/settings.json
+- you can select custom and connect to any API.
 
-- Not configured yet for publish under the `@null/*` scope. Once branding and features are stable, npm publish workflows will be updated.
 
-## Configure Null CLI
-
-1) Enable the experimental local option (if not already visible):
-
-```bash
-# Bash
-export NULL_EXPERIMENTAL_LOCAL=1
-# PowerShell
-$env:NULL_EXPERIMENTAL_LOCAL = 1
-```
-
-2) In Null CLI, run `/auth` and select “Local DeepSeek (OpenAI-compatible)”. Enter:
-- Base URL: `http://localhost:8000/v1`
-- Model: `deepseek-r1-1.5B` (must match `--served-model-name`)
-- API key: leave empty (localhost allowed)
-
-Troubleshooting:
-- If requests time out, reduce context size or increase server/model timeout.
-- Ensure the model name matches what your server advertises.
-- Some repos require `--trust-remote-code` on vLLM.
-
-## Roadmap (High-level)
-
-- Pentest tooling execution (Nmap, Gobuster, SQLMap, etc.)
-- Methodology-driven flows (MITRE ATT&CK alignment)
-- Real-time logs, safety gates, and final reporting
-- Local model support and pluggable reasoning providers
 
 ## Safety & Legal
 
@@ -103,22 +77,7 @@ Build the image locally:
 docker build -t null-cli:local .
 ```
 
-Quick version check:
-
-```bash
-docker run --rm -it null-cli:local null --version
-```
-
 Run the CLI with your project mounted as the working directory:
-
-- macOS/Linux (bash/zsh):
-
-```bash
-docker run --rm -it \
-  -v "$(pwd)":/workspace \
-  -w /workspace \
-  null-cli:local null
-```
 
 - Windows (PowerShell):
 
@@ -129,49 +88,7 @@ docker run --rm -it `
   null-cli:local null
 ```
 
-Optional: pass environment variables (e.g., config dir, proxies):
 
-```bash
-docker run --rm -it \
-  -e NULL_DIR=/workspace/.null \
-  -e HTTP_PROXY=... -e HTTPS_PROXY=... \
-  -v "$(pwd)":/workspace -w /workspace \
-  null-cli:local null
-```
-
-
-
-
-Connect to Ollama on the host from inside Docker:
-
-- Windows/macOS:
-
-```powershell
-docker run --rm -it `
-  -e NULL_EXPERIMENTAL_LOCAL=1 `
-  -e OPENAI_BASE_URL=http://host.docker.internal:11434/v1 `
-  -e OPENAI_MODEL=llama3.1:8b `
-  -v "${PWD}:/workspace" -w /workspace `
-  null-cli:local null
-```
-
-- Linux (Docker 20.10+):
-
-```bash
-docker run --rm -it \
-  --add-host=host.docker.internal:host-gateway \
-  -e NULL_EXPERIMENTAL_LOCAL=1 \
-  -e OPENAI_BASE_URL=http://host.docker.internal:11434/v1 \
-  -e OPENAI_MODEL=llama3.1:8b \
-  -v "$(pwd)":/workspace -w /workspace \
-  null-cli:local null
-```
-
-Notes:
-- For non-local Base URLs, an API key is still required.
-- If your server enforces Authorization, provide any token and configure it to accept it.
-- See also: `docs/local-deepseek.md` for compose and llama.cpp options.
-  And `docs/ollama.md` for Ollama setup and host/Docker networking tips.
 
 ## Brand Identity
 

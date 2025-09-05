@@ -28,7 +28,7 @@ export const Tips: React.FC<TipsProps> = ({ config }) => {
         <Text color={Colors.Foreground}>
           3. Create{' '}
           <Text bold color={Colors.AccentPurple}>
-            QWEN.md
+            NULL.md
           </Text>{' '}
           files to customize your interactions with Null CLI.
         </Text>

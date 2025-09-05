@@ -1,14 +1,14 @@
-# Local DeepSeek R1 (OpenAI-compatible)
+﻿# Local DeepSeek R1 (OpenAI-compatible)
 
-This guide runs DeepSeek R1 locally and exposes an OpenAI-compatible API so Null CLI can connect via the “Local DeepSeek (OpenAI-compatible)” auth option.
+This guide runs DeepSeek R1 locally and exposes an OpenAI-compatible API so Null CLI can connect via the â€œLocal DeepSeek (OpenAI-compatible)â€ auth option.
 
-Important: You are responsible for complying with the model license and any “uncensored” distribution terms. If the model requires gated access, you’ll need a valid Hugging Face token.
+Important: You are responsible for complying with the model license and any â€œuncensoredâ€ distribution terms. If the model requires gated access, youâ€™ll need a valid Hugging Face token.
 
 ## Requirements
 
 - NVIDIA GPU with recent drivers (recommended for performance)
 - Docker and NVIDIA Container Toolkit (`--gpus all`)
-- A DeepSeek R1 “uncensored” model you’re authorized to use (Hugging Face ID or local path)
+- A DeepSeek R1 â€œuncensoredâ€ model youâ€™re authorized to use (Hugging Face ID or local path)
 ### Option A :Pre-download to local path (no token inside Docker)
 
 If the repo is gated, you can still avoid prompts inside Docker by downloading on the host first and serving from a local path.
@@ -105,4 +105,5 @@ Notes:
 - To serve from a pre-downloaded local directory, uncomment `./models:/models` and change the `deepseek` command to `--model /models/deepseek-r1`.
 
 
-Check the server’s docs for exact flags and compatibility with your GGUF.
+Check the serverâ€™s docs for exact flags and compatibility with your GGUF.
+

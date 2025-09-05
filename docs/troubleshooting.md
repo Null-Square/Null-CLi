@@ -1,4 +1,4 @@
-# Troubleshooting guide
+﻿# Troubleshooting guide
 
 This guide provides solutions to common issues and debugging tips, including topics on:
 
@@ -31,7 +31,7 @@ This guide provides solutions to common issues and debugging tips, including top
 
 - **Q: Where are the Qwen Code configuration or settings files stored?**
   - A: The Qwen Code configuration is stored in two `settings.json` files:
-    1. In your home directory: `~/.qwen/settings.json`.
+    1. In your home directory: `~/.null/settings.json` (legacy: `~/.qwen/settings.json`).
     2. In your project's root directory: `./.qwen/settings.json`.
 
     Refer to [Qwen Code Configuration](./cli/configuration.md) for more details.
@@ -81,7 +81,7 @@ This guide provides solutions to common issues and debugging tips, including top
   - `QWEN_CODE_IDE_WORKSPACE_PATH`
   - `QWEN_CODE_IDE_SERVER_PORT`
 - If running in a container, verify `host.docker.internal` resolves. Otherwise, map the host appropriately.
-- Reinstall the companion with `/ide install` and use “Qwen Code: Run” in the Command Palette to verify it launches.
+- Reinstall the companion with `/ide install` and use â€œQwen Code: Runâ€ in the Command Palette to verify it launches.
 
 ## Debugging Tips
 
@@ -105,3 +105,4 @@ This guide provides solutions to common issues and debugging tips, including top
 ## Existing GitHub Issues similar to yours or creating new Issues
 
 If you encounter an issue that was not covered here in this _Troubleshooting guide_, consider searching the Qwen Code [Issue tracker on GitHub](https://github.com/QwenLM/qwen-code/issues). If you can't find an issue similar to yours, consider creating a new GitHub Issue with a detailed description. Pull requests are also welcome!
+

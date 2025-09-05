@@ -36,7 +36,7 @@ const memoryToolSchemaData: FunctionDeclaration = {
       scope: {
         type: 'string',
         description:
-          'Where to save the memory: "global" saves to user-level ~/.qwen/QWEN.md (shared across all projects), "project" saves to current project\'s QWEN.md (project-specific). If not specified, will prompt user to choose.',
+          'Where to save the memory: "global" saves to user-level ~/.qwen/NULL.md (shared across all projects), "project" saves to current project\'s NULL.md (project-specific). If not specified, will prompt user to choose.',
         enum: ['global', 'project'],
       },
     },
@@ -62,14 +62,16 @@ Do NOT use this tool:
 
 - \`fact\` (string, required): The specific fact or piece of information to remember. This should be a clear, self-contained statement. For example, if the user says "My favorite color is blue", the fact would be "My favorite color is blue".
 - \`scope\` (string, optional): Where to save the memory:
-  - "global": Saves to user-level ~/.qwen/QWEN.md (shared across all projects)
-  - "project": Saves to current project's QWEN.md (project-specific)
+  - "global": Saves to user-level ~/.qwen/NULL.md (shared across all projects)
+  - "project": Saves to current project's NULL.md (project-specific)
   - If not specified, the tool will ask the user where they want to save the memory.
 `;
 
-export const GEMINI_CONFIG_DIR = '.qwen';
-export const DEFAULT_CONTEXT_FILENAME = 'QWEN.md';
-export const MEMORY_SECTION_HEADER = '## Qwen Added Memories';
+// Default to Null directory with legacy fallback handled when reading
+export const GEMINI_CONFIG_DIR = '.null';
+const LEGACY_GEMINI_CONFIG_DIR = '.qwen';
+export const DEFAULT_CONTEXT_FILENAME = 'NULL.md';
+export const MEMORY_SECTION_HEADER = '## Null Added Memories';
 
 // This variable will hold the currently configured filename for QWEN.md context files.
 // It defaults to DEFAULT_CONTEXT_FILENAME but can be overridden by setGeminiMdFilename.
@@ -96,6 +98,10 @@ export function getAllGeminiMdFilenames(): string[] {
   if (Array.isArray(currentGeminiMdFilename)) {
     return currentGeminiMdFilename;
   }
+  // Include legacy filename for backward compatibility when using NULL.md by default
+  if (currentGeminiMdFilename === 'NULL.md') {
+    return ['NULL.md', 'QWEN.md'];
+  }
   return [currentGeminiMdFilename];
 }
 
@@ -108,6 +114,14 @@ interface SaveMemoryParams {
 
 function getGlobalMemoryFilePath(): string {
   return path.join(homedir(), GEMINI_CONFIG_DIR, getCurrentGeminiMdFilename());
+}
+
+function getLegacyGlobalMemoryFilePath(): string {
+  return path.join(
+    homedir(),
+    LEGACY_GEMINI_CONFIG_DIR,
+    getCurrentGeminiMdFilename(),
+  );
 }
 
 function getProjectMemoryFilePath(): string {
@@ -143,6 +157,14 @@ async function readMemoryFileContent(
   } catch (err) {
     const error = err as Error & { code?: string };
     if (!(error instanceof Error) || error.code !== 'ENOENT') throw err;
+    // Legacy fallback for global scope: read from ~/.qwen if ~/.null not found
+    if (scope === 'global') {
+      try {
+        return await fs.readFile(getLegacyGlobalMemoryFilePath(), 'utf-8');
+      } catch (e) {
+        // ignore and fall through
+      }
+    }
     return '';
   }
 }

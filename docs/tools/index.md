@@ -1,4 +1,4 @@
-# Null tools
+﻿# Null tools
 
 Null CLI includes built-in tools that the model uses to interact with your local environment, access information, and perform actions. These tools enhance the CLI's capabilities, enabling it to go beyond text generation and assist with a wide range of tasks.
 
@@ -18,7 +18,7 @@ These tools provide the following capabilities:
 
 ## How to use Null tools
 
-To use Qwen Code tools, provide a prompt to the CLI. The process works as follows:
+To use Null tools, provide a prompt to the CLI. The process works as follows:
 
 1.  You provide a prompt to the CLI.
 2.  The CLI sends the prompt to the core.
@@ -50,8 +50,10 @@ Null's built-in tools can be broadly categorized as follows:
 - **[Multi-File Read Tool](./multi-file.md) (`read_many_files`):** A specialized tool for reading content from multiple files or directories, often used by the `@` command.
 - **[Memory Tool](./memory.md) (`save_memory`):** For saving and recalling information across sessions.
 - **[Todo Write Tool](./todo-write.md) (`todo_write`):** For creating and managing structured task lists during coding sessions.
+- **[Nmap Tool](./nmap.md) (`nmap_scan`):** For constrained host/port scanning with confirmation.
 
 Additionally, these tools incorporate:
 
 - **[MCP servers](./mcp-server.md)**: MCP servers act as a bridge between the model and your local environment or other services like APIs.
 - **[Sandboxing](../sandbox.md)**: Sandboxing isolates the model and its changes from your environment to reduce potential risk.
+

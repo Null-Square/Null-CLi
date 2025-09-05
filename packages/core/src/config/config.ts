@@ -1,3 +1,4 @@
+﻿import { NmapTool } from '../tools/nmap.js';
 /**
  * @license
  * Copyright 2025 Google LLC
@@ -910,6 +911,7 @@ export class Config {
     registerCoreTool(WebFetchTool, this);
     registerCoreTool(ReadManyFilesTool, this);
     registerCoreTool(ShellTool, this);
+    registerCoreTool(NmapTool, this);
     registerCoreTool(MemoryTool);
     registerCoreTool(TodoWriteTool, this);
     // Conditionally register web search tool only if Tavily API key is set
@@ -923,3 +925,4 @@ export class Config {
 }
 // Export model constants for use in CLI
 export { DEFAULT_GEMINI_FLASH_MODEL };
+

@@ -9,7 +9,7 @@ import stripAnsi from 'strip-ansi';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Header } from './Header.js';
 import * as useTerminalSize from '../hooks/useTerminalSize.js';
-import { longAsciiLogo } from './AsciiArt.js';
+// longAsciiLogo import removed; compare with a distinctive substring instead
 
 vi.mock('../hooks/useTerminalSize.js');
 

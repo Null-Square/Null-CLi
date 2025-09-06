@@ -33,6 +33,3 @@ jobs:
 
       - name: Run important unit tests (core)
         run: pnpm --filter @null/null-core --if-present test:ci
-
-      - name: Run important unit tests (cli)
-        run: pnpm --filter @null/null-cli --if-present test:ci

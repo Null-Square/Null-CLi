@@ -1,4 +1,5 @@
 ﻿import { NmapTool } from '../tools/nmap.js';
+import { OrangepieTool } from '../tools/orangepie.js';
 /**
  * @license
  * Copyright 2025 Google LLC
@@ -912,6 +913,7 @@ export class Config {
     registerCoreTool(ReadManyFilesTool, this);
     registerCoreTool(ShellTool, this);
     registerCoreTool(NmapTool, this);
+    registerCoreTool(OrangepieTool, this);
     registerCoreTool(MemoryTool);
     registerCoreTool(TodoWriteTool, this);
     // Conditionally register web search tool only if Tavily API key is set

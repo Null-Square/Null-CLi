@@ -51,9 +51,9 @@ Null's built-in tools can be broadly categorized as follows:
 - **[Memory Tool](./memory.md) (`save_memory`):** For saving and recalling information across sessions.
 - **[Todo Write Tool](./todo-write.md) (`todo_write`):** For creating and managing structured task lists during coding sessions.
 - **[Nmap Tool](./nmap.md) (`nmap_scan`):** For constrained host/port scanning with confirmation.
+- **[Unicorn Tool](./unicorn.md) (`unicorn`):** For constrained credential brute forcing (Hydra wrapper) with confirmation.
 
 Additionally, these tools incorporate:
 
 - **[MCP servers](./mcp-server.md)**: MCP servers act as a bridge between the model and your local environment or other services like APIs.
 - **[Sandboxing](../sandbox.md)**: Sandboxing isolates the model and its changes from your environment to reduce potential risk.
-

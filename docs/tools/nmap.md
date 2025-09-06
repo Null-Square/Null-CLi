@@ -1,6 +1,6 @@
 # Nmap Tool (`nmap_scan`)
 
-Runs a constrained Nmap scan against a single explicit target. Use this to validate your environment and test tool-calling with a standard recon utility.
+R
 
 - Always asks for confirmation before executing.
 - Allowed options: `-Pn`, `-sV`, `-p <ports>`, `--top-ports <N>`, `-T2`/`-T3`/`-T4`.

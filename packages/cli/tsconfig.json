@@ -4,6 +4,14 @@
     "outDir": "dist",
     "jsx": "react-jsx",
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "baseUrl": ".",
+    "paths": {
+      "@null/null-core": [
+        "../core/dist/index.d.ts",
+        "../core/src/index.ts",
+        "../core/index.ts"
+      ]
+    },
     "types": ["node", "vitest/globals"]
   },
   "include": [

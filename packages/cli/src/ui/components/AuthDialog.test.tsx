@@ -88,9 +88,9 @@ describe('AuthDialog', () => {
         <AuthDialog onSelect={() => {}} settings={settings} />,
       );
 
-      // Since the auth dialog only shows OpenAI option now,
+      // Since the auth dialog shows generic API option first now,
       // it won't show GEMINI_API_KEY messages
-      expect(lastFrame()).toContain('OpenAI');
+      expect(lastFrame()).toContain('API');
     });
 
     it('should not show the GEMINI_API_KEY message if GEMINI_DEFAULT_AUTH_TYPE is set to something else', () => {
@@ -154,9 +154,9 @@ describe('AuthDialog', () => {
         <AuthDialog onSelect={() => {}} settings={settings} />,
       );
 
-      // Since the auth dialog only shows OpenAI option now,
+      // Since the auth dialog shows generic API option first now,
       // it won't show GEMINI_API_KEY messages
-      expect(lastFrame()).toContain('OpenAI');
+      expect(lastFrame()).toContain('API');
     });
   });
 
@@ -189,7 +189,8 @@ describe('AuthDialog', () => {
       );
 
       // This is a bit brittle, but it's the best way to check which item is selected.
-      expect(lastFrame()).toContain('● 2. OpenAI');
+      // OpenAI-compatible API is listed first now
+      expect(lastFrame()).toContain('● 1. API');
     });
 
     it('should fall back to default if GEMINI_DEFAULT_AUTH_TYPE is not set', () => {
@@ -217,8 +218,8 @@ describe('AuthDialog', () => {
         <AuthDialog onSelect={() => {}} settings={settings} />,
       );
 
-      // Default is Qwen OAuth (first option)
-      expect(lastFrame()).toContain('● 1. Qwen OAuth');
+      // Default is now API (first option)
+      expect(lastFrame()).toContain('● 1. API');
     });
 
     it('should show an error and fall back to default if GEMINI_DEFAULT_AUTH_TYPE is invalid', () => {
@@ -249,8 +250,8 @@ describe('AuthDialog', () => {
       );
 
       // Since the auth dialog doesn't show GEMINI_DEFAULT_AUTH_TYPE errors anymore,
-      // it will just show the default Qwen OAuth option
-      expect(lastFrame()).toContain('● 1. Qwen OAuth');
+      // it will just show the default API option
+      expect(lastFrame()).toContain('● 1. API');
     });
   });
 

@@ -8,6 +8,7 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { initCommand } from './initCommand.js';
+import { getCurrentGeminiMdFilename } from '@null/null-core';
 import { createMockCommandContext } from '../../test-utils/mockCommandContext.js';
 import { type CommandContext } from './types.js';
 
@@ -34,7 +35,7 @@ vi.mock('fs', async (importOriginal) => {
 describe('initCommand', () => {
   let mockContext: CommandContext;
   const targetDir = '/test/dir';
-  const DEFAULT_CONTEXT_FILENAME = 'QWEN.md';
+  const DEFAULT_CONTEXT_FILENAME = getCurrentGeminiMdFilename();
   const geminiMdPath = path.join(targetDir, DEFAULT_CONTEXT_FILENAME);
 
   beforeEach(() => {
@@ -92,9 +93,7 @@ describe('initCommand', () => {
 
     // Assert: Check that the correct prompt is submitted
     expect(result.type).toBe('submit_prompt');
-    expect(result.content).toContain(
-      'You are Qwen Code, an interactive CLI agent',
-    );
+    expect(result.content).toContain('Analyze the current directory');
   });
 
   it(`should proceed to initialize when ${DEFAULT_CONTEXT_FILENAME} exists but is empty`, async () => {

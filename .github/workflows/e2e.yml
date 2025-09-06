@@ -27,8 +27,6 @@ jobs:
         uses: 'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020' # ratchet:actions/setup-node@v4
         with:
           node-version: '${{ matrix.node-version }}'
-          cache: 'pnpm'
-          cache-dependency-path: 'pnpm-lock.yaml'
           registry-url: 'https://registry.npmjs.org/'
 
       - name: 'Set up pnpm'
@@ -87,8 +85,6 @@ jobs:
         uses: 'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020' # ratchet:actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
-          cache: 'pnpm'
-          cache-dependency-path: 'pnpm-lock.yaml'
           registry-url: 'https://registry.npmjs.org/'
 
       - name: 'Set up pnpm'

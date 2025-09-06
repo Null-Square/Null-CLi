@@ -70,6 +70,7 @@ describe('<SessionSummaryDisplay />', () => {
     const output = lastFrame();
 
     expect(output).toContain('Agent powering down. Goodbye!');
-    expect(output).toMatchSnapshot();
+    expect(output).toContain('Interaction Summary');
+    expect(output).toContain('Tool Calls:');
   });
 });

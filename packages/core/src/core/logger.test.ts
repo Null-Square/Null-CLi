@@ -26,8 +26,10 @@ import { Content } from '@google/genai';
 
 import crypto from 'node:crypto';
 import os from 'node:os';
+import { QWEN_DIR } from '../utils/paths.js';
 
-const GEMINI_DIR_NAME = '.qwen';
+// Use the actual configured settings dir ('.null' if present, else '.qwen')
+const GEMINI_DIR_NAME = QWEN_DIR;
 const TMP_DIR_NAME = 'tmp';
 const LOG_FILE_NAME = 'logs.json';
 const CHECKPOINT_FILE_NAME = 'checkpoint.json';

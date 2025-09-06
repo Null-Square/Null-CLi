@@ -13,6 +13,7 @@ import {
 } from './user_account.js';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
+import { QWEN_DIR } from './paths.js';
 import path from 'node:path';
 
 vi.mock('os', async (importOriginal) => {
@@ -26,7 +27,7 @@ vi.mock('os', async (importOriginal) => {
 describe('user_account', () => {
   let tempHomeDir: string;
   const accountsFile = () =>
-    path.join(tempHomeDir, '.qwen', 'google_accounts.json');
+    path.join(tempHomeDir, QWEN_DIR, 'google_accounts.json');
   beforeEach(() => {
     tempHomeDir = fs.mkdtempSync(
       path.join(os.tmpdir(), 'qwen-code-test-home-'),

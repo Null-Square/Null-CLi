@@ -10,6 +10,10 @@ import * as os from 'os';
 import * as path from 'path';
 import { WorkspaceContext } from './workspaceContext.js';
 
+// On Windows, creating symlinks often requires elevated privileges or Developer Mode.
+// Gate symlink-dependent tests locally to avoid EPERM; CI runs on Linux where these pass.
+const SYMLINK_TESTS_ENABLED = process.platform !== 'win32';
+
 describe('WorkspaceContext with real filesystem', () => {
   let tempDir: string;
   let cwd: string;
@@ -99,7 +103,7 @@ describe('WorkspaceContext with real filesystem', () => {
       expect(directories).toHaveLength(2);
     });
 
-    it('should handle symbolic links correctly', () => {
+    (SYMLINK_TESTS_ENABLED ? it : it.skip)('should handle symbolic links correctly', () => {
       const realDir = path.join(tempDir, 'real');
       fs.mkdirSync(realDir, { recursive: true });
       const symlinkDir = path.join(tempDir, 'symlink-to-real');
@@ -174,7 +178,7 @@ describe('WorkspaceContext with real filesystem', () => {
       );
     });
 
-    describe('with symbolic link', () => {
+    (SYMLINK_TESTS_ENABLED ? describe : describe.skip)('with symbolic link', () => {
       describe('in the workspace', () => {
         let realDir: string;
         let symlinkDir: string;
@@ -255,7 +259,7 @@ describe('WorkspaceContext with real filesystem', () => {
         });
       });
 
-      it('should reject symbolic file links outside the workspace', () => {
+      (SYMLINK_TESTS_ENABLED ? it : it.skip)('should reject symbolic file links outside the workspace', () => {
         const realFile = path.join(tempDir, 'real-file.txt');
         fs.writeFileSync(realFile, 'content');
 
@@ -267,7 +271,7 @@ describe('WorkspaceContext with real filesystem', () => {
         expect(workspaceContext.isPathWithinWorkspace(symlinkFile)).toBe(false);
       });
 
-      it('should reject non-existent symbolic file links outside the workspace', () => {
+      (SYMLINK_TESTS_ENABLED ? it : it.skip)('should reject non-existent symbolic file links outside the workspace', () => {
         const realFile = path.join(tempDir, 'real-file.txt');
 
         const symlinkFile = path.join(cwd, 'symlink-to-real-file');
@@ -278,7 +282,7 @@ describe('WorkspaceContext with real filesystem', () => {
         expect(workspaceContext.isPathWithinWorkspace(symlinkFile)).toBe(false);
       });
 
-      it('should handle circular symlinks gracefully', () => {
+      (SYMLINK_TESTS_ENABLED ? it : it.skip)('should handle circular symlinks gracefully', () => {
         const workspaceContext = new WorkspaceContext(cwd);
         const linkA = path.join(cwd, 'link-a');
         const linkB = path.join(cwd, 'link-b');

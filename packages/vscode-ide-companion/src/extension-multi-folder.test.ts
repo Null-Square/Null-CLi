@@ -7,7 +7,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { activate } from './extension.js';
+import { activate, IDE_WORKSPACE_PATH_ENV_VAR } from './extension.js';
 
 vi.mock('vscode', () => ({
   window: {
@@ -98,7 +98,7 @@ describe('activate with multiple folders', () => {
     await activate(context);
 
     expect(context.environmentVariableCollection.replace).toHaveBeenCalledWith(
-      'QWEN_CODE_IDE_WORKSPACE_PATH',
+      IDE_WORKSPACE_PATH_ENV_VAR,
       '/foo/bar',
     );
   });
@@ -117,7 +117,7 @@ describe('activate with multiple folders', () => {
     await activate(context);
 
     expect(context.environmentVariableCollection.replace).toHaveBeenCalledWith(
-      'QWEN_CODE_IDE_WORKSPACE_PATH',
+      IDE_WORKSPACE_PATH_ENV_VAR,
       ['/foo/bar', '/baz/qux'].join(path.delimiter),
     );
   });
@@ -133,7 +133,7 @@ describe('activate with multiple folders', () => {
     await activate(context);
 
     expect(context.environmentVariableCollection.replace).toHaveBeenCalledWith(
-      'QWEN_CODE_IDE_WORKSPACE_PATH',
+      IDE_WORKSPACE_PATH_ENV_VAR,
       '',
     );
   });
@@ -151,7 +151,7 @@ describe('activate with multiple folders', () => {
     await activate(context);
 
     expect(context.environmentVariableCollection.replace).toHaveBeenCalledWith(
-      'QWEN_CODE_IDE_WORKSPACE_PATH',
+      IDE_WORKSPACE_PATH_ENV_VAR,
       '/foo/bar',
     );
 
@@ -166,7 +166,7 @@ describe('activate with multiple folders', () => {
     });
 
     expect(context.environmentVariableCollection.replace).toHaveBeenCalledWith(
-      'QWEN_CODE_IDE_WORKSPACE_PATH',
+      IDE_WORKSPACE_PATH_ENV_VAR,
       ['/foo/bar', '/baz/qux'].join(path.delimiter),
     );
 
@@ -180,7 +180,7 @@ describe('activate with multiple folders', () => {
     });
 
     expect(context.environmentVariableCollection.replace).toHaveBeenCalledWith(
-      'QWEN_CODE_IDE_WORKSPACE_PATH',
+      IDE_WORKSPACE_PATH_ENV_VAR,
       '/baz/qux',
     );
   });
@@ -203,7 +203,7 @@ describe('activate with multiple folders', () => {
       expect(
         context.environmentVariableCollection.replace,
       ).toHaveBeenCalledWith(
-        'QWEN_CODE_IDE_WORKSPACE_PATH',
+        IDE_WORKSPACE_PATH_ENV_VAR,
         'c:/foo/bar;d:/baz/qux',
       );
     },

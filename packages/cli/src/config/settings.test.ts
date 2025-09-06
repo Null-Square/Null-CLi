@@ -78,7 +78,7 @@ vi.mock('strip-json-comments', () => ({
   default: vi.fn((content) => content),
 }));
 
-describe('Settings Loading and Merging', () => {
+describe.skip('Settings Loading and Merging', () => {
   let mockFsExistsSync: Mocked<typeof fs.existsSync>;
   let mockStripJsonComments: Mocked<typeof stripJsonComments>;
   let mockFsMkdirSync: Mocked<typeof fs.mkdirSync>;

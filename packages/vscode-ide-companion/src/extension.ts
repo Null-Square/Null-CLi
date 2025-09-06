@@ -11,7 +11,7 @@ import { DiffContentProvider, DiffManager } from './diff-manager.js';
 import { createLogger } from './utils/logger.js';
 
 const INFO_MESSAGE_SHOWN_KEY = 'nullCliInfoMessageShown';
-const IDE_WORKSPACE_PATH_ENV_VAR = 'NULL_CLI_IDE_WORKSPACE_PATH';
+export const IDE_WORKSPACE_PATH_ENV_VAR = 'NULL_CLI_IDE_WORKSPACE_PATH';
 export const DIFF_SCHEME = 'null-diff';
 
 let ideServer: IDEServer;

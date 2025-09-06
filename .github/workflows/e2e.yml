@@ -27,9 +27,14 @@ jobs:
         uses: 'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020' # ratchet:actions/setup-node@v4
         with:
           node-version: '${{ matrix.node-version }}'
-          cache: 'npm'
-          cache-dependency-path: 'package-lock.json'
+          cache: 'pnpm'
+          cache-dependency-path: 'pnpm-lock.yaml'
           registry-url: 'https://registry.npmjs.org/'
+
+      - name: 'Set up pnpm'
+        uses: 'pnpm/action-setup@v4'
+        with:
+          version: '8'
 
       - name: 'Configure npm for rate limiting'
         run: |-
@@ -40,11 +45,11 @@ jobs:
 
       - name: 'Install dependencies'
         run: |-
-          npm ci --prefer-offline --no-audit --progress=false
+          pnpm install --frozen-lockfile
 
       - name: 'Build project'
         run: |-
-          npm run build
+          pnpm run build
 
       - name: 'Set up Docker'
         if: |-
@@ -69,7 +74,7 @@ jobs:
           SANDBOX: '${{ matrix.sandbox }}'
           VERBOSE: 'true'
         run: |-
-          npm run "test:integration:${SANDBOX}"
+          pnpm run "test:integration:${SANDBOX}"
 
   e2e-test-macos:
     name: 'E2E Test - macOS'
@@ -82,9 +87,14 @@ jobs:
         uses: 'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020' # ratchet:actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
-          cache: 'npm'
-          cache-dependency-path: 'package-lock.json'
+          cache: 'pnpm'
+          cache-dependency-path: 'pnpm-lock.yaml'
           registry-url: 'https://registry.npmjs.org/'
+
+      - name: 'Set up pnpm'
+        uses: 'pnpm/action-setup@v4'
+        with:
+          version: '8'
 
       - name: 'Configure npm for rate limiting'
         run: |-
@@ -95,15 +105,15 @@ jobs:
 
       - name: 'Install dependencies'
         run: |-
-          npm ci --prefer-offline --no-audit --progress=false
+          pnpm install --frozen-lockfile
 
       - name: 'Build project'
         run: |-
-          npm run build
+          pnpm run build
 
       - name: 'Run E2E tests'
         env:
           OPENAI_API_KEY: '${{ secrets.OPENAI_API_KEY }}'
           OPENAI_BASE_URL: '${{ secrets.OPENAI_BASE_URL }}'
           OPENAI_MODEL: '${{ secrets.OPENAI_MODEL }}'
-        run: 'npm run test:e2e'
+        run: 'pnpm run test:e2e'

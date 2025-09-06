@@ -47,6 +47,91 @@ function sanitizeTarget(target: string): string | null {
   return t;
 }
 
+// Shared JSON schema for both Unicorn and Hydra tools
+const HYDRA_PARAM_SCHEMA = {
+  type: 'object',
+  properties: {
+    target: {
+      type: 'string',
+      description: 'Hostname or IP (single target, no wildcards).',
+    },
+    service: {
+      type: 'string',
+      enum: ['ssh', 'ftp', 'telnet', 'smtp', 'imap', 'pop3', 'rdp', 'smb'],
+      description: 'Hydra module/service to use.',
+    },
+    port: {
+      type: 'number',
+      description: 'Optional explicit port (-s).',
+      minimum: 1,
+      maximum: 65535,
+    },
+    username: {
+      type: 'string',
+      description: 'Single username (-l).',
+    },
+    user_list: {
+      type: 'string',
+      description: 'Path to username list file (-L).',
+    },
+    password: {
+      type: 'string',
+      description: 'Single password (-p).',
+    },
+    password_list: {
+      type: 'string',
+      description: 'Path to password list file (-P).',
+    },
+    tasks: {
+      type: 'number',
+      description: 'Parallel tasks (-t). Keep low to respect rate limits.',
+      minimum: 1,
+      maximum: 16,
+    },
+    wait_time: {
+      type: 'number',
+      description: 'Seconds to wait between retries (-w).',
+      minimum: 1,
+      maximum: 60,
+    },
+    exit_on_success: {
+      type: 'boolean',
+      description: 'Stop after first valid credential (-f).',
+    },
+    verbose: {
+      type: 'boolean',
+      description: 'Verbose output (-V).',
+    },
+  },
+  required: ['target', 'service'],
+  additionalProperties: false,
+} as const;
+
+function validateAndNormalizeHydraParams(
+  params: HydraToolParams,
+): string | null {
+  const tgt = sanitizeTarget(params.target);
+  if (!tgt)
+    return 'Invalid target. Provide a single hostname or IP without wildcards.';
+
+  // Require at least one username source and one password source
+  const hasUser = Boolean(params.username || params.user_list);
+  const hasPass = Boolean(params.password || params.password_list);
+  if (!hasUser || !hasPass) {
+    return 'Provide at least one username (or user_list) and one password (or password_list).';
+  }
+
+  // Apply conservative defaults if unset
+  if (!params.tasks) params.tasks = 4;
+  if (!params.wait_time) params.wait_time = 2;
+  if (params.exit_on_success === undefined) params.exit_on_success = true;
+  if (params.verbose === undefined) params.verbose = true;
+
+  // Normalize target after validation
+  params.target = tgt;
+  return null;
+}
+
 class HydraToolInvocation extends BaseToolInvocation<HydraToolParams, ToolResult> {
   constructor(private readonly config: Config, params: HydraToolParams) {
     super(params);
@@ -146,64 +231,7 @@ export class HydraTool extends BaseDeclarativeTool<HydraToolParams, ToolResult> 
         '- Requires explicit confirmation before execution.\n' +
         '- Defaults favor safety (low concurrency, optional early-exit).',
       Kind.Other,
-      {
-        type: 'object',
-        properties: {
-          target: {
-            type: 'string',
-            description: 'Hostname or IP (single target, no wildcards).',
-          },
-          service: {
-            type: 'string',
-            enum: ['ssh', 'ftp', 'telnet', 'smtp', 'imap', 'pop3', 'rdp', 'smb'],
-            description: 'Hydra module/service to use.',
-          },
-          port: {
-            type: 'number',
-            description: 'Optional explicit port (-s).',
-            minimum: 1,
-            maximum: 65535,
-          },
-          username: {
-            type: 'string',
-            description: 'Single username (-l).',
-          },
-          user_list: {
-            type: 'string',
-            description: 'Path to username list file (-L).',
-          },
-          password: {
-            type: 'string',
-            description: 'Single password (-p).',
-          },
-          password_list: {
-            type: 'string',
-            description: 'Path to password list file (-P).',
-          },
-          tasks: {
-            type: 'number',
-            description: 'Parallel tasks (-t). Keep low to respect rate limits.',
-            minimum: 1,
-            maximum: 16,
-          },
-          wait_time: {
-            type: 'number',
-            description: 'Seconds to wait between retries (-w).',
-            minimum: 1,
-            maximum: 60,
-          },
-          exit_on_success: {
-            type: 'boolean',
-            description: 'Stop after first valid credential (-f).',
-          },
-          verbose: {
-            type: 'boolean',
-            description: 'Verbose output (-V).',
-          },
-        },
-        required: ['target', 'service'],
-        additionalProperties: false,
-      },
+      HYDRA_PARAM_SCHEMA,
       false,
       false,
     );
@@ -212,25 +240,42 @@ export class HydraTool extends BaseDeclarativeTool<HydraToolParams, ToolResult> 
   protected override validateToolParamValues(
     params: HydraToolParams,
   ): string | null {
-    const tgt = sanitizeTarget(params.target);
-    if (!tgt) return 'Invalid target. Provide a single hostname or IP without wildcards.';
+    return validateAndNormalizeHydraParams(params);
+  }
 
-    // Require at least one username source and one password source
-    const hasUser = Boolean(params.username || params.user_list);
-    const hasPass = Boolean(params.password || params.password_list);
-    if (!hasUser || !hasPass) {
-      return 'Provide at least one username (or user_list) and one password (or password_list).';
-    }
+  protected override createInvocation(
+    params: HydraToolParams,
+  ): ToolInvocation<HydraToolParams, ToolResult> {
+    return new HydraToolInvocation(this.config, params);
+  }
+}
 
-    // Apply conservative defaults if unset
-    if (!params.tasks) params.tasks = 4;
-    if (!params.wait_time) params.wait_time = 2;
-    if (params.exit_on_success === undefined) params.exit_on_success = true;
-    if (params.verbose === undefined) params.verbose = true;
+export class HydraNativeTool extends BaseDeclarativeTool<
+  HydraToolParams,
+  ToolResult
+> {
+  // Expose a second tool name that maps to the same implementation
+  static readonly Name = 'hydra_bruteforce';
 
-    // Normalize target after validation
-    params.target = tgt;
-    return null;
+  constructor(private readonly config: Config) {
+    super(
+      HydraNativeTool.Name,
+      'Hydra',
+      'Run a constrained Hydra brute-force attempt against a single in-scope target.\n' +
+        '- Allowed services: ssh, ftp, telnet, smtp, imap, pop3, rdp, smb.\n' +
+        '- Requires explicit confirmation before execution.\n' +
+        '- Defaults favor safety (low concurrency, optional early-exit).',
+      Kind.Other,
+      HYDRA_PARAM_SCHEMA,
+      false,
+      false,
+    );
+  }
+
+  protected override validateToolParamValues(
+    params: HydraToolParams,
+  ): string | null {
+    return validateAndNormalizeHydraParams(params);
   }
 
   protected override createInvocation(

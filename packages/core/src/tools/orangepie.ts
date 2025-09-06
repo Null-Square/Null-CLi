@@ -25,6 +25,8 @@ export interface OrangepieToolParams {
   hide_form?: boolean; // Hide form for lure creation
   session_id?: string; // Session ID for session mode
   verbose?: boolean; // Enable verbose output
+  binary?: 'evilginx2' | 'evilginx'; // Optional explicit binary name (Linux packages may use 'evilginx')
+  cwd?: string; // Optional working directory for evilginx (config/phishlets location)
 }
 
 function sanitizePhishlet(phishlet: string): string | null {
@@ -47,7 +49,7 @@ class OrangepieToolInvocation extends BaseToolInvocation<OrangepieToolParams, To
   }
 
   getDescription(): string {
-    const parts: string[] = ['evilginx2'];
+    const parts: string[] = [this.params.binary ?? 'evilginx2'];
     
     switch (this.params.mode) {
       case 'phishlet':
@@ -132,38 +134,53 @@ class OrangepieToolInvocation extends BaseToolInvocation<OrangepieToolParams, To
     // Add verbose flag if requested
     if (this.params.verbose) args.push('-debug');
 
-    return await new Promise<ToolResult>((resolve) => {
-      const child = spawn('evilginx2', args, {
-        cwd: this.config.getTargetDir(),
-      });
-      let stdout = '';
-      let stderr = '';
-      let closed = false;
-      child.stdout.on('data', (d) => (stdout += d?.toString() ?? ''));
-      child.stderr.on('data', (d) => (stderr += d?.toString() ?? ''));
-      child.on('error', (err) => {
-        if (closed) return;
-        closed = true;
-        resolve({
-          llmContent: `Error: ${err.message}\nStderr: ${stderr || '(empty)'}`,
-          returnDisplay: `Orangepie error: ${err.message}`,
-          error: { message: err.message },
+    const run = (bin: string) =>
+      new Promise<ToolResult>((resolve) => {
+        const child = spawn(bin, args, {
+          cwd: this.params.cwd || this.config.getTargetDir(),
+        });
+        let stdout = '';
+        let stderr = '';
+        let closed = false;
+        child.stdout.on('data', (d) => (stdout += d?.toString() ?? ''));
+        child.stderr.on('data', (d) => (stderr += d?.toString() ?? ''));
+        child.on('error', (err: NodeJS.ErrnoException) => {
+          if (closed) return;
+          closed = true;
+          resolve({
+            llmContent: `Error launching ${bin}: ${err.message}\nStderr: ${stderr || '(empty)'}`,
+            returnDisplay: `Orangepie error: ${err.message}`,
+            error: { message: err.message },
+          });
+        });
+        child.on('close', (code) => {
+          if (closed) return;
+          closed = true;
+          if (code === 0 || stdout) {
+            resolve({
+              llmContent: stdout || '(no output)',
+              returnDisplay: 'Orangepie completed. See details above.',
+            } as ToolResult);
+          } else {
+            const msg = `Orangepie (${bin}) exited with code ${code}. Stderr: ${stderr || '(empty)'}`;
+            resolve({ llmContent: msg, returnDisplay: msg, error: { message: msg } });
+          }
         });
       });
-      child.on('close', (code) => {
-        if (closed) return;
-        closed = true;
-        if (code === 0 || stdout) {
-          resolve({
-            llmContent: stdout || '(no output)',
-            returnDisplay: 'Orangepie completed. See details above.',
-          } as ToolResult);
-        } else {
-          const msg = `Orangepie exited with code ${code}. Stderr: ${stderr || '(empty)'}`;
-          resolve({ llmContent: msg, returnDisplay: msg, error: { message: msg } });
-        }
-      });
-    });
+
+    // If explicit binary specified, just run it
+    if (this.params.binary) {
+      return await run(this.params.binary);
+    }
+
+    // Try evilginx2, fall back to evilginx if ENOENT
+    const first = await run('evilginx2');
+    if (!first.error || !/error launching evilginx2/i.test(String(first.llmContent))) {
+      return first;
+    }
+    // Fallback attempt
+    const second = await run('evilginx');
+    return second;
   }
 }
 
@@ -220,6 +237,15 @@ export class OrangepieTool extends BaseDeclarativeTool<OrangepieToolParams, Tool
           verbose: {
             type: 'boolean',
             description: 'Enable verbose output',
+          },
+          binary: {
+            type: 'string',
+            enum: ['evilginx2', 'evilginx'],
+            description: 'Optional explicit binary name to use.',
+          },
+          cwd: {
+            type: 'string',
+            description: 'Optional working directory for evilginx (e.g., config/phishlets path).',
           },
         },
         required: ['mode'],

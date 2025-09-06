@@ -52,6 +52,8 @@ Null's built-in tools can be broadly categorized as follows:
 - **[Todo Write Tool](./todo-write.md) (`todo_write`):** For creating and managing structured task lists during coding sessions.
 - **[Nmap Tool](./nmap.md) (`nmap_scan`):** For constrained host/port scanning with confirmation.
 - **[Unicorn Tool](./unicorn.md) (`unicorn`):** For constrained credential brute forcing (Hydra wrapper) with confirmation.
+- **[Hydra Tool](./hydra.md) (`hydra_bruteforce`):** Same functionality as Unicorn, exposed under a Hydra name.
+- **[Orangepie Tool](./orangepie.md) (`orangepie`):** Evilginx(2) wrapper for phishlets, lures, sessions, and proxy.
 
 Additionally, these tools incorporate:
 

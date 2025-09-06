@@ -1,4 +1,5 @@
-# Unicorn Tool (`unicorn`)
+# Hydra Tool (`hydra_bruteforce`)
+
 
 
 ## Safety & Defaults
@@ -26,7 +27,7 @@ At least one of `username`/`user_list` and one of `password`/`password_list` mus
 
 ## Example
 
-Tool: unicorn
+Tool: hydra_bruteforce
 
 Params:
 
@@ -44,7 +45,7 @@ Params:
 
 ## Notes
 
-- Executes `hydra` (or `hydra.exe`) under the hood; ensure it is on PATH.
+- Ensure `hydra` is installed and on PATH. On Windows, `hydra.exe` should be available.
 - Respect client ROE: rate limits, account lockout policies, and maintenance windows.
 - Evidence lines typically include `login:` and `password:` when credentials are found.
 

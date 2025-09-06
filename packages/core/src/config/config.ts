@@ -31,6 +31,7 @@ import {
 } from '../tools/memoryTool.js';
 import { TodoWriteTool } from '../tools/todoWrite.js';
 import { WebSearchTool } from '../tools/web-search.js';
+import { HydraTool, HydraNativeTool } from '../tools/hydra.js';
 import { GeminiClient } from '../core/client.js';
 import { FileDiscoveryService } from '../services/fileDiscoveryService.js';
 import { GitService } from '../services/gitService.js';
@@ -913,6 +914,8 @@ export class Config {
     registerCoreTool(ReadManyFilesTool, this);
     registerCoreTool(ShellTool, this);
     registerCoreTool(NmapTool, this);
+    registerCoreTool(HydraTool, this);
+    registerCoreTool(HydraNativeTool, this);
     registerCoreTool(OrangepieTool, this);
     registerCoreTool(MemoryTool);
     registerCoreTool(TodoWriteTool, this);
@@ -927,4 +930,3 @@ export class Config {
 }
 // Export model constants for use in CLI
 export { DEFAULT_GEMINI_FLASH_MODEL };
-

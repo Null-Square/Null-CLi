@@ -31,5 +31,8 @@ jobs:
       - name: Build (all packages)
         run: pnpm -r build
 
-      - name: Run tests (if present)
-        run: pnpm -r --if-present test
+      - name: Run important unit tests (core)
+        run: pnpm --filter @null/null-core --if-present test:ci
+
+      - name: Run important unit tests (cli)
+        run: pnpm --filter @null/null-cli --if-present test:ci

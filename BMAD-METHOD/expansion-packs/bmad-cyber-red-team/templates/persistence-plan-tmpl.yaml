@@ -1,0 +1,89 @@
+﻿# <!-- Powered by BMAD(R) Core -->
+---
+template:
+  id: persistence-plan
+  name: Persistence Plan
+  version: 1.1
+  description: Simulated persistence catalog and defensive guidance
+  output:
+    format: markdown
+    filename: "docs/red-team/persistence-plan.md"
+
+workflow:
+  mode: interactive
+  elicitation: advanced-elicitation
+  custom_elicitation:
+    title: "Persistence Elicitation Actions"
+    options:
+      - "Assess dwell-time vs. detection trade-offs"
+      - "Clarify prerequisites for a persistence mechanism"
+      - "Plan rollback and cleanup validation"
+      - "Evaluate redundancy between techniques"
+      - "Map persistence signals to defender telemetry"
+      - "Review cloud vs. on-prem coverage"
+      - "Consider credential hygiene impacts"
+      - "Prioritise techniques by mission value"
+      - "Proceed to next section"
+
+validation:
+  required_sections:
+    - summary
+    - techniques
+    - detections
+    - handoff
+
+sections:
+  - id: summary
+    title: Summary
+    instruction: Outline persistence goals, guardrails, and priorities.
+    template: |
+      - **Objective:** {{objective}}
+      - **Target Platforms:** {{platforms}}
+      - **Constraints:** {{constraints}}
+      - **ROE Notes:** {{roe_notes}}
+  - id: inputs
+    title: Inputs from Exploit Report
+    instruction: Capture footholds and credentials available.
+    template: |
+      - **Foothold:** {{foothold}}
+        - **Privileges:** {{privileges}}
+        - **Limitations:** {{limitations}}
+  - id: techniques
+    title: Persistence Technique Catalog
+    instruction: Detail each simulated persistence option with dwell-time, detection, and rollback.
+    template: |
+      - **Technique Name:** {{technique_name}}
+        - **ATT&CK ID:** {{technique_id}}
+        - **Commands/Scripts:** `{{commands}}`
+        - **Prerequisites:** {{prerequisites}}
+        - **Observables:** {{observables}}
+        - **Detection Sources:** {{detection_sources}}
+        - **Rollback Procedure:** {{rollback}}
+        - **Risk Rating:** {{risk_rating}}
+    elicit: true
+  - id: dwell_time
+    title: Dwell-Time & Risk Analysis
+    instruction: Evaluate longevity, noise, and resiliency for each technique.
+    template: |
+      - **Technique:** {{technique}}
+        - **Expected Dwell-Time:** {{dwell_time}}
+        - **Noise Level:** {{noise}}
+        - **Resilience Score:** {{resilience}}
+        - **Notes:** {{notes}}
+  - id: detections
+    title: Detection & Mitigation Guidance
+    instruction: Provide detection artefacts and mitigation steps.
+    template: |
+      - **Telemetry Source:** {{source}}
+        - **Indicator:** {{indicator}}
+        - **Detection Rule:** {{rule}}
+        - **Mitigation:** {{mitigation}}
+  - id: handoff
+    title: Handoff to C2
+    instruction: Summarize communication requirements and monitoring for C2.
+    template: |
+      - **Active Footholds:** {{footholds}}
+      - **Communication Needs:** {{communication_needs}}
+      - **Monitoring Hooks:** {{monitoring_hooks}}
+      - **Cleanup Requirements:** {{cleanup}}
+      - **Open Items:** {{open_items}}

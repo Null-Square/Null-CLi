@@ -1,0 +1,24 @@
+﻿# <!-- Powered by BMAD(R) Core -->
+bundle:
+  name: Cyber Red Team
+  icon: ascii-redteam
+  description: Agent bundle implementing a simulated Lockheed Martin Kill Chain red-team workflow aligned with MITRE ATT&CK.
+
+agents:
+  - recon
+  - weaponization
+  - delivery
+  - exploitation
+  - installation
+  - c2
+  - actions-on-objectives
+
+workflows:
+  - red-team-kill-chain
+
+
+
+
+
+
+

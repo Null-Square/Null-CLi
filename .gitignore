@@ -51,3 +51,34 @@ gha-creds-*.json
 
 # Local model weights (do not commit)
 models/
+
+# BMAD-METHOD imported project
+BMAD-METHOD/node_modules/
+BMAD-METHOD/pnpm-lock.yaml
+BMAD-METHOD/bun.lock
+BMAD-METHOD/deno.lock
+BMAD-METHOD/pnpm-workspace.yaml
+BMAD-METHOD/package-lock.json
+BMAD-METHOD/logs/
+BMAD-METHOD/*.log
+BMAD-METHOD/npm-debug.log*
+BMAD-METHOD/build/*.txt
+BMAD-METHOD/web-bundles/
+BMAD-METHOD/.env
+BMAD-METHOD/.prettierignore
+BMAD-METHOD/.prettierrc
+BMAD-METHOD/.windsurf/
+BMAD-METHOD/.trae/
+BMAD-METHOD/.bmad*/.cursor/
+BMAD-METHOD/CLAUDE.md
+BMAD-METHOD/.ai/
+BMAD-METHOD/.claude
+BMAD-METHOD/.gemini
+BMAD-METHOD/.bmad-core
+BMAD-METHOD/.bmad-creator-tools
+BMAD-METHOD/test-project-install/
+BMAD-METHOD/sample-project/
+BMAD-METHOD/flattened-codebase.xml
+BMAD-METHOD/*.stats.md
+BMAD-METHOD/.bmad-cyber-red-team/
+

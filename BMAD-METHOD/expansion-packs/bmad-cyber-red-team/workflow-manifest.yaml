@@ -1,0 +1,17 @@
+﻿templates:
+  recon-report: templates/recon-report-tmpl.yaml
+  payload-report: templates/payload-report-tmpl.yaml
+  delivery-plan: templates/delivery-plan-tmpl.yaml
+  exploit-report: templates/exploit-report-tmpl.yaml
+  persistence-plan: templates/persistence-plan-tmpl.yaml
+  c2-plan: templates/c2-plan-tmpl.yaml
+  objectives-report: templates/objectives-report-tmpl.yaml
+
+tasks:
+  recon-phase: tasks/recon-phase.md
+  weaponization-phase: tasks/weaponization-phase.md
+  delivery-phase: tasks/delivery-phase.md
+  exploitation-phase: tasks/exploitation-phase.md
+  installation-phase: tasks/installation-phase.md
+  c2-phase: tasks/c2-phase.md
+  objectives-phase: tasks/objectives-phase.md

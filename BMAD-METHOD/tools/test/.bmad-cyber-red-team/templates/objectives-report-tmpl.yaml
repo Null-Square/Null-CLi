@@ -1,0 +1,77 @@
+﻿# <!-- Powered by BMAD(R) Core -->
+---
+template:
+  id: objectives-report
+  name: Actions on Objectives Report
+  version: 1.1
+  description: Simulated objective execution summary
+  output:
+    format: markdown
+    filename: "docs/red-team/objectives-report.md"
+
+workflow:
+  mode: interactive
+  elicitation: advanced-elicitation
+  custom_elicitation:
+    title: "Objectives Elicitation Actions"
+    options:
+      - "Refine success criteria for an objective"
+      - "Plan additional evidence capture"
+      - "Assess business impact and stakeholder messaging"
+      - "Identify defensive gaps exposed during execution"
+      - "Design follow-up tabletop or remediation task"
+      - "Validate cleanup and data-handling steps"
+      - "Capture lessons learned and next steps"
+      - "Highlight blue-team collaboration opportunities"
+      - "Proceed to next section"
+
+validation:
+  required_sections:
+    - objectives
+    - outcomes
+    - defensive_recs
+    - closeout
+
+sections:
+  - id: objectives
+    title: Objectives & Success Criteria
+    instruction: Define goals within ROE.
+    template: |
+      - **Objective:** {{objective}}
+        - **ATT&CK Techniques:** {{techniques}}
+        - **Success Criteria:** {{success_criteria}}
+        - **Constraints:** {{constraints}}
+    elicit: true
+  - id: plan
+    title: Planned Actions (Simulated)
+    instruction: Step-by-step with observables and checkpoints.
+    template: |
+      - **Action:** {{action}}
+        - **Tooling:** {{tooling}}
+        - **Observables:** {{observables}}
+        - **Evidence Collection:** {{evidence}}
+        - **Contingency:** {{contingency}}
+  - id: outcomes
+    title: Outcomes & Evidence (Simulated)
+    instruction: Hypothetical results, artifacts, and indicators.
+    template: |
+      - **Result:** {{result}}
+        - **Evidence:** {{evidence}}
+        - **Detection Response:** {{detection_response}}
+        - **Lessons Learned:** {{lessons}}
+  - id: defensive_recs
+    title: Defensive Recommendations
+    instruction: Hardening, detections, and playbook improvements.
+    template: |
+      - **Gap:** {{gap}}
+        - **Recommendation:** {{recommendation}}
+        - **Owner:** {{owner}}
+        - **Follow-up Date:** {{follow_up}}
+  - id: closeout
+    title: Engagement Closeout
+    instruction: Lessons learned, constraints, and next steps.
+    template: |
+      - **Summary:** {{summary}}
+      - **Cleanup Actions:** {{cleanup_actions}}
+      - **Stakeholder Briefing:** {{stakeholder_briefing}}
+      - **Next Steps:** {{next_steps}}

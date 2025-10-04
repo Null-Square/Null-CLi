@@ -1,15 +1,16 @@
 ﻿# <!-- Powered by BMAD(R) Core -->
 workflow:
   id: red-team-kill-chain
-  name: Red Team Kill Chain Workflow (Simulation)
+  name: Red Team Kill Chain Workflow (Execution)
   description: >-
-    Linear red-team simulation aligned to the Lockheed Martin Kill Chain with MITRE ATT&CK
-    context. Each hand-off is documentation-only and reinforces defender awareness.
-  type: simulation
+    Authorized red team engagement aligned to the Lockheed Martin Kill Chain with MITRE ATT&CK
+    context. Each phase executes real actions within documented ROE, producing live artefacts
+    and defender-aware telemetry. All operations require explicit confirmation and maintain full auditability.
+  type: execution
   project_types:
-    - red-team-simulation
-    - kill-chain-training
-    - tabletop-exercise
+    - red-team-engagement
+    - authorized-penetration-test
+    - offensive-security-assessment
   triggers:
     - command: /red-team
     - intent: run red team
@@ -18,6 +19,7 @@ workflow:
     - scope_and_roe
     - constraints
     - intelligence_feeds (optional)
+    - execution_approval: true  # Explicit confirmation required for live actions
 
   sequence:
     - step: recon
@@ -28,9 +30,12 @@ workflow:
         template: recon-report
       outputs:
         - docs/red-team/recon-report.md
+        - reports/amass/
+        - reports/nmap/
+        - reports/httpx/
       notes: |
-        Confirm scope and ROE before simulating reconnaissance. Produce recon-report.md and
-        surface key risks for downstream phases.
+        Perform passive and (if authorized) active reconnaissance. Generate real artefacts in reports/
+        with timestamps, hashes, and ATT&CK mappings. Confirm scope before execution.
 
     - step: weaponization
       title: Weaponization
@@ -42,9 +47,13 @@ workflow:
         template: payload-report
       outputs:
         - docs/red-team/payload-report.md
+        - build/payloads/
+        - build/lures/
+        - build/profiles/
+        - reports/weaponization/
       notes: |
-        Translate recon insights into payload and lure concepts with defensive countermeasures.
-        Maintain simulation-only payload descriptions.
+        Build and test real payloads and lures based on recon findings. Store artefacts in build/
+        with SHA256 hashes, logs, and kill-switch instructions. All generation requires user confirmation.
 
     - step: delivery
       title: Delivery
@@ -56,9 +65,11 @@ workflow:
         template: delivery-plan
       outputs:
         - docs/red-team/delivery-plan.md
+        - build/infrastructure/
+        - reports/delivery/
       notes: |
-        Design simulated delivery logistics, risk scoring, and detection considerations for
-        each proposed channel.
+        Deploy live delivery infrastructure (email, web, SMB) within authorized scope.
+        Verify service availability, log startup output, and provide monitoring hooks for exploitation.
 
     - step: exploitation
       title: Exploitation
@@ -71,9 +82,10 @@ workflow:
         template: exploit-report
       outputs:
         - docs/red-team/exploit-report.md
+        - reports/exploitation/
       notes: |
-        Model exploit chains, prerequisites, mitigations, and kill-switch guidance. No
-        weaponized code or actionable payloads.
+        Execute approved exploit chains against delivered payloads. Capture proof of execution,
+        system context, and defensive telemetry. Maintain full rollback and cleanup procedures.
 
     - step: installation
       title: Installation (Persistence)
@@ -85,8 +97,10 @@ workflow:
         template: persistence-plan
       outputs:
         - docs/red-team/persistence-plan.md
+        - reports/installation/
       notes: |
-        Capture persistence concepts, rollback plans, and defender visibility expectations.
+        Establish authorized persistence mechanisms. Log artefacts, registry keys, or cron jobs.
+        Include defender visibility notes and immediate removal steps.
 
     - step: c2
       title: Command and Control
@@ -98,8 +112,11 @@ workflow:
         template: c2-plan
       outputs:
         - docs/red-team/c2-plan.md
+        - build/c2/
+        - reports/c2/
       notes: |
-        Provide simulated C2 profiles, traffic shaping, and blue-team detection strategies.
+        Operate live C2 channels with traffic shaping and evasion. Log beaconing patterns,
+        encryption metadata, and detection opportunities for blue team correlation.
 
     - step: objectives
       title: Actions on Objectives
@@ -111,9 +128,10 @@ workflow:
         template: objectives-report
       outputs:
         - docs/red-team/objectives-report.md
+        - reports/objectives/
       notes: |
-        Document simulated impacts, evidence, defensive recommendations, and engagement
-        close-out guidance.
+        Perform authorized actions on objectives (data staging, lateral movement, impact simulation).
+        Document outcomes, evidence paths, and defensive recommendations with full audit trail.
 
   outputs:
     - docs/red-team/recon-report.md
@@ -123,23 +141,23 @@ workflow:
     - docs/red-team/persistence-plan.md
     - docs/red-team/c2-plan.md
     - docs/red-team/objectives-report.md
+    - reports/          # All raw logs and artefacts
+    - build/            # All generated payloads, lures, configs
 
   handoff_prompts:
     recon_to_weaponization: |
       Recon complete. Key exposures, asset map, and ATT&CK leads are available in
-      docs/red-team/recon-report.md. Confirm ROE alignment before drafting payload concepts.
+      docs/red-team/recon-report.md. Confirm ROE alignment before building payloads.
     weaponization_to_delivery: |
-      Payload and lure concepts documented in docs/red-team/payload-report.md. Design delivery
-      playbooks that respect constraints and contain detection plans.
+      Payload and lure artefacts generated in build/payloads/ and build/lures/.
+      Delivery infrastructure can now be deployed using docs/red-team/delivery-plan.md.
     delivery_to_exploitation: |
-      Delivery logistics finalized in docs-red-team/delivery-plan.md. Model exploit sequences
-      with clear prerequisites and blue-team detection notes.
+      Delivery infrastructure is live: {{active_channels}}.
+      Payloads available at {{payload_paths}}. Begin exploitation with monitoring enabled.
     exploitation_to_installation: |
-      Exploit design captured in docs/red-team/exploit-report.md. Outline persistence options
-      with rollback guidance and risk tiers.
+      Initial access confirmed in docs/red-team/exploit-report.md.
+      Proceed with authorized persistence mechanisms and log all artefacts.
     installation_to_c2: |
-      Persistence approach defined in docs/red-team/persistence-plan.md. Draft C2 profiles with
-      traffic shaping and alert expectations.
+      Persistence established. C2 channels can now be activated with profiles in build/c2/.
     c2_to_objectives: |
-      C2 plan completed in docs/red-team/c2-plan.md. Summarize mission objectives, simulated
-      outcomes, and defensive uplift recommendations.
+      Stable C2 confirmed. Execute authorized actions on objectives with full evidence capture.

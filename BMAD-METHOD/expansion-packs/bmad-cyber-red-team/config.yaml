@@ -37,6 +37,7 @@ devDebugLog: .ai/red-team-debug-log.md
 devStoryLocation: docs/red-team/journal
 slashPrefix: BMAD-RedTeam
 safety:
-  defaultMode: simulation
+  requireExplicitApproval: true
   roeDocument: docs/red-team/rules-of-engagement.md
   cleanupChecklist: docs/red-team/cleanup-checklist.md
+  labDomainDefault: "nullsquare.net"

@@ -22,6 +22,8 @@
 - Hash and catalogue every artefact in build/ directories; store logs with timestamps in reports/weaponization/.
 - Tokenise or redact sensitive data before sharing; keep originals in controlled storage.
 - Define kill-switch/cleanup procedures for each payload and lure before handoff.
+- **All payload/lure generation requires explicit user confirmation per artefact.**
+- **Commands are logged, outputs hashed, and no artefact is released without validation.**
 
 ## Recommended Tooling
 | Tool | Command | Goal | Expected Output |
@@ -42,29 +44,40 @@
 3. For each payload concept:
    - Identify prerequisites (access, credentials, staging hosts) and intended delivery vector.
    - Map to relevant ATT&CK techniques (e.g., T1566.001 Spearphishing Attachment, T1105 Ingress Tool Transfer).
-   - Generate payload using approved tooling (msfvenom, donut, veil, pezor, etc.). Store outputs under build/payloads/ with timestamped filenames; capture hashes and console logs in reports/weaponization/.
+   - **Prompt user: "Build this payload using [tool]? (y/N)"**
+   - **If confirmed**, execute the command, capture full stdout/stderr, compute SHA256 hash, and store:
+     - Binary/script in `build/payloads/` or `build/lures/`
+     - Command log in `reports/weaponization/{{tool}}-{{timestamp}}.log`
+   - Record observables (callbacks, file names, registry artifacts) and test notes (if lab available).
 4. For each lure concept:
-   - Craft narrative and artefacts (macro documents, phishing portals, trojanised installers) with tooling such as macro_pack, setoolkit, custom HTML/email templates.
-   - Record observables (subject lines, URLs, metadata) and defensive countermeasures (mail filters, awareness messaging).
-5. Produce supporting configurations (C2 profiles, loader scripts, signing/cert artefacts) that align with payload requirements. Store them under build/profiles/ or build/lures/ as appropriate.
+   - Craft narrative and artefacts (macro documents, phishing portals, trojanised installers).
+   - **Prompt user before generating**: "Generate lure using [tool]? (y/N)"
+   - **If confirmed**, run tool (e.g., `macro_pack`, `setoolkit`), store output, log execution.
+5. Produce supporting configurations (C2 profiles, loader scripts, signing/cert artefacts):
+   - **Auto-generate C2 profiles** if referenced (e.g., via `beaconizer`), store in `build/profiles/`.
+   - **Log all profile parameters** (jitter, sleeptime, headers) for defender correlation.
 6. Document each payload/lure in a catalog including:
    - Description and purpose
    - Build commands/tooling and required infrastructure
-   - Hashes, file paths, sizes
+   - **Actual hashes, file paths, sizes (from generated artefacts)**
    - Execution flow, dependencies, and observables (network callbacks, registry keys)
    - Detection guidance (EDR, SIEM, mail gateway rules) and mitigation recommendations
    - Kill-switches and cleanup instructions
-7. Populate docs/red-team/payload-report.md via the template, incorporating summary, recon inputs, payload concepts, lure design, detections/mitigations, ATT&CK mapping, and delivery handoff information.
+7. Populate docs/red-team/payload-report.md via the template, incorporating summary, recon inputs, **actual artefact metadata**, payload concepts, lure design, detections/mitigations, ATT&CK mapping, and delivery handoff information.
 8. Validate all artefacts comply with ROE (no unauthorised live C2, dangerous payload release). Archive supporting logs and update evidence register.
-9. Prepare a concise handoff brief for the Delivery Agent summarising approved payloads, lure assets, staging checklists, monitoring hooks, and unresolved questions.
+9. **(Optional)** If user requests staging: offer to launch temporary HTTP server bound to `127.0.0.1` or approved IP.
+10. Prepare a concise handoff brief for the Delivery Agent summarising **approved and built** payloads, lure assets, staging checklists, monitoring hooks, and unresolved questions.
 
 ## Decision Gates
 - **ROE Approval**: Stop if payload family or lure channel exceeds authorised actions; escalate for approval before proceeding.
+- **Execution Confirmation**: **Never auto-execute** — require explicit "y" per payload/lure.
 - **Detection Risk**: Reassess if detection likelihood is too high without mission value; propose alternate payloads or mitigations.
 - **Infrastructure Readiness**: Ensure staging hosts, C2 profiles, and credential stores exist before finalising handoff.
 - **Safety Review**: Confirm kill-switch and cleanup instructions are defined; do not release artefacts without them.
 
 ## Outputs
-- `docs/red-team/payload-report.md`
-- Artefacts in `build/payloads`, `build/lures`, `build/profiles`, with logs/hashes in `reports/weaponization`
+- `docs/red-team/payload-report.md` (with **real artefact hashes and paths**)
+- **Actual artefacts** in `build/payloads`, `build/lures`, `build/profiles`
+- Command logs and hashes in `reports/weaponization/`
 - Handoff summary for Delivery phase with staging and monitoring requirements.
+

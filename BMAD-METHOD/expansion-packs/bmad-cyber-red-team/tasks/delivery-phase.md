@@ -4,7 +4,7 @@
 
 ## Purpose
 - Design **and execute** delivery logistics, infrastructure, and monitoring for selected payloads/lures.
-- Produce docs/red-team/delivery-plan.md detailing channel selection, **live staging status**, detection coverage, and contingency paths.
+- Produce docs/red-team/delivery-report.md detailing channel selection, **live staging status**, detection coverage, and contingency paths.
 
 ## Prerequisites
 - docs/red-team/payload-report.md
@@ -60,7 +60,7 @@
 7. Prepare contingency and rollback plans:
    - **Auto-generate shutdown commands** (e.g., `sudo systemctl stop gophish`)
    - Include cleanup scripts for certs, domains, logs
-8. Populate `docs/red-team/delivery-plan.md` via template:
+8. Populate `docs/red-team/.md` via template:
    - Include **live infrastructure status**, not just plans
    - Reference **actual log paths and service endpoints**
    - Note **test delivery results** (e.g., "Test email sent to ops@lab.local — delivered")
@@ -77,7 +77,7 @@
 - **Detection Overload**: if telemetry shows high alert risk, recommend pausing or switching vectors.
 
 ## Outputs
-- `docs/red-team/delivery-plan.md` (**with live service status**)
+- `docs/red-team/.md` (**with live service status**)
 - **Running services or staged artefacts** in `build/infrastructure`
 - **Real logs** in `reports/delivery/` (not just templates)
 - Handoff summary for Exploitation phase with **confirmed delivery endpoints**

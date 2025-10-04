@@ -2,7 +2,7 @@
 bundle:
   name: Cyber Red Team
   icon: ascii-redteam
-  description: Agent bundle implementing a simulated Lockheed Martin Kill Chain red-team workflow aligned with MITRE ATT&CK.
+  description: Agent bundle implementing a Lockheed Martin Kill Chain red-team workflow aligned with MITRE ATT&CK.
 
 agents:
   - recon

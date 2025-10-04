@@ -1,10 +1,10 @@
 ﻿templates:
   recon-report: templates/recon-report-tmpl.yaml
   payload-report: templates/payload-report-tmpl.yaml
-  delivery-plan: templates/delivery-plan-tmpl.yaml
+  delivery-plan: templates/delivery-report-tmpl.yaml
   exploit-report: templates/exploit-report-tmpl.yaml
-  persistence-plan: templates/persistence-plan-tmpl.yaml
-  c2-plan: templates/c2-plan-tmpl.yaml
+  persistence-plan: templates/persistence-report-tmpl.yaml
+  c2-plan: templates/c2-report-tmpl.yaml
   objectives-report: templates/objectives-report-tmpl.yaml
 
 tasks:

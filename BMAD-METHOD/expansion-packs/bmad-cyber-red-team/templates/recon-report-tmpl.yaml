@@ -2,9 +2,9 @@
 ---
 template:
   id: recon-report
-  name: Reconnaissance Report
-  version: 1.1
-  description: Structured recon report (simulation-first)
+  name: Reconnaissance Execution Report
+  version: 1.2
+  description: Live reconnaissance results, artefacts, and attack surface map from authorized discovery
   output:
     format: markdown
     filename: "docs/red-team/recon-report.md"
@@ -13,17 +13,17 @@ workflow:
   mode: interactive
   elicitation: advanced-elicitation
   custom_elicitation:
-    title: "Recon Elicitation Actions"
+    title: "Recon Validation Actions"
     options:
-      - "Clarify scope boundaries or prohibited actions"
-      - "Identify additional data sources for passive recon"
-      - "Explore blue-team telemetry to validate findings"
-      - "Assess risk/impact of exposed assets"
-      - "Brainstorm stealthier enumeration approaches"
-      - "Stress-test assumptions about asset ownership"
-      - "Map findings to compliance requirements"
-      - "Plan follow-up questions for stakeholders"
-      - "Proceed to next section"
+      - "Verify subdomain resolution status"
+      - "Confirm live web service availability"
+      - "Review raw scan logs for false positives"
+      - "Cross-check findings with threat intel"
+      - "Assess data sensitivity and redaction needs"
+      - "Validate scope alignment per finding"
+      - "Map exposures to business impact"
+      - "Prepare artefact hashes for audit"
+      - "Proceed to next phase"
   allow_skip: false
 
 validation:
@@ -43,53 +43,67 @@ sections:
       - **Prohibited Actions:** {{prohibited_actions}}
       - **Timebox:** {{timebox}}
       - **Data Handling Rules:** {{data_policy}}
+      - **Execution Timestamp:** {{execution_timestamp}} UTC
     elicit: true
+
   - id: objectives
     title: Recon Objectives
     instruction: List concrete questions the recon must answer.
     template: |
       - {{objective}}
+
   - id: methodology
-    title: Methodology (Simulated)
+    title: Executed Methodology
     instruction: |
-      List tools/commands for OSINT and surface mapping (documentation only).
-      Include assumptions, parameters, timestamps, and artefact locations.
+      List tools/commands **actually executed** during reconnaissance.
+      Include full commands, UTC timestamps, artefact paths, and hashes where applicable.
     template: |
       - **Tool:** {{tool_name}}
-        - **Command:** `{{command}}`
+        - **Command Executed:** `{{command}}`
+        - **Execution Time:** {{timestamp}} UTC
         - **Purpose:** {{purpose}}
-        - **Artefacts:** {{artefacts}}
+        - **Artefact Path:** `{{artefact_path}}`
+        - **SHA256 (if file):** `{{file_hash}}`
         - **Assumptions:** {{assumptions}}
+
   - id: findings
-    title: Findings
-    instruction: Summarize domains, subdomains, hosts, tech stacks, exposures.
+    title: Verified Findings
+    instruction: Summarize **confirmed** domains, hosts, services, and exposures with evidence.
     template: |
       - **Category:** {{category}}
         - **Detail:** {{detail}}
-        - **Evidence:** {{evidence}}
+        - **Evidence Path:** `{{evidence_path}}`
+        - **Verification Status:** {{verification_status}} (Confirmed / Unverified)
         - **Detection Notes:** {{detection_notes}}
+        - **Data Classification:** {{classification}} (Public / Internal / Confidential)
     elicit: true
+
   - id: attack_surface
     title: Attack Surface Summary
-    instruction: Highlight high-value assets and potential entry points.
+    instruction: Highlight high-value, **reachable** assets and entry points.
     template: |
       - **Asset:** {{asset}}
         - **Exposure:** {{exposure}}
+        - **Reachability:** {{reachability}} (Live / Resolved / Historical)
         - **Priority:** {{priority}}
         - **Recommended Next Step:** {{next_step}}
+
   - id: mitre_mapping
-    title: MITRE ATT&CK Mapping
-    instruction: Map relevant techniques with notes and references.
+    title: MITRE ATT&CK Execution Mapping
+    instruction: Map findings to real-world technique usage with evidence.
     template: |
-      - **Technique:** {{technique_id}} {{technique_name}}
-        - **Related Finding:** {{related_finding}}
-        - **Reference:** {{reference}}
+      - **Technique:** {{technique_id}} – {{technique_name}}
+        - **Observed Activity:** {{observed_activity}}
+        - **Evidence Reference:** `{{evidence_path}}`
         - **Defensive Note:** {{defensive_note}}
+        - **Telemetry Source:** {{telemetry_source}} (e.g., DNS logs, Shodan, CT logs)
+
   - id: next
     title: Handoff to Weaponization
     instruction: Key insights to inform payload/lure planning.
     template: |
-      - **Insight:** {{insight}}
-      - **Implication for Payloads:** {{payload_implication}}
+      - **Top Exposure:** {{top_exposure}}
+        - **Implication for Payloads:** {{payload_implication}}
+        - **Supporting Artefact:** `{{artefact_path}}`
       - **Telemetry to Preserve:** {{telemetry}}
       - **Open Questions:** {{open_questions}}

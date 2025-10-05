@@ -1,0 +1,112 @@
+﻿# <!-- Powered by BMAD(R) Core -->
+---
+template:
+  id: persistence-report
+  name: Persistence Execution Report
+  version: 1.2
+  description: Live persistence mechanisms, artefacts, and telemetry for authorized red team operations
+  output:
+    format: markdown
+    filename: "docs/red-team/persistence-report.md"
+
+workflow:
+  mode: interactive
+  elicitation: advanced-elicitation
+  custom_elicitation:
+    title: "Persistence Validation Actions"
+    options:
+      - "Verify active scheduled tasks or services"
+      - "Confirm registry key or cron entry presence"
+      - "Review persistence script hashes and paths"
+      - "Test kill-switch/rollback effectiveness"
+      - "Assess dwell-time vs. detection in lab"
+      - "Validate cloud persistence objects (Azure AD, etc.)"
+      - "Document open risks or deployment failures"
+      - "Align artefacts with C2 requirements"
+      - "Proceed to next phase"
+
+validation:
+  required_sections:
+    - summary
+    - techniques
+    - detections
+    - handoff
+
+sections:
+  - id: summary
+    title: Execution Summary
+    instruction: Factual overview of deployed persistence mechanisms.
+    template: |
+      - **Objective:** {{objective}}
+      - **Target Platforms:** {{platforms}}
+      - **Execution Timestamp:** {{execution_timestamp}} UTC
+      - **ROE Compliance:** {{roe_compliance_status}}
+      - **Lab-Safe Targets Used:** {{lab_safe_targets_used}}
+
+  - id: inputs
+    title: Exploitation Inputs
+    instruction: Reference confirmed footholds and privileges from exploit report.
+    template: |
+      - **Foothold:** {{foothold}}
+        - **Privileges:** {{privileges}}
+        - **Session Type:** {{session_type}} (e.g., shell, RDP, SSH)
+        - **Exploit Report Link:** `{{exploit_report_path}}`
+
+  - id: techniques
+    title: Deployed Persistence Mechanisms
+    instruction: Report actual deployed mechanisms with verification.
+    template: |
+      - **Technique Name:** {{technique_name}}
+        - **ATT&CK ID:** {{technique_id}}
+        - **Execution Command:** `{{command_executed}}`
+        - **Artefact Path:** `{{artefact_path}}`
+        - **SHA256 Hash (if file):** `{{file_hash}}`
+        - **Verification Output:** 
+          ```text
+          {{verification_output}}
+          ```
+        - **Status:** {{status}} ✅ Active / ⚠️ Partial / ❌ Failed
+        - **Observables:** {{observables}}
+        - **Detection Sources:** {{detection_sources}}
+        - **Kill-Switch Command:** `{{kill_command}}`
+        - **Log File:** `{{log_path}}`
+    elicit: true
+
+  - id: dwell_time
+    title: Dwell-Time & Risk Validation
+    instruction: Document real-world longevity, noise, and resiliency.
+    template: |
+      - **Technique:** {{technique}}
+        - **Verified Dwell-Time:** {{dwell_time}}
+        - **Observed Noise Level:** {{noise}}
+        - **Resilience Tested:** {{resilience}} (e.g., survives reboot)
+        - **Notes:** {{notes}}
+
+  - id: detections
+    title: Observed & Expected Telemetry
+    instruction: Link persistence to actual or expected defender alerts.
+    template: |
+      - **Telemetry Source:** {{source}} (e.g., Sysmon, auditd, Azure AD logs)
+        - **Indicator:** {{indicator}}
+        - **Detection Status:** {{detection_status}} (Observed in lab / Expected in prod)
+        - **Log Sample:** 
+          ```log
+          {{log_sample}}
+          ```
+        - **Mitigation Guidance:** {{mitigation}}
+
+  - id: handoff
+    title: Handoff to C2
+    instruction: Provide confirmed persistence details for C2 activation.
+    template: |
+      - **Active Footholds:** 
+        {{#each active_footholds}}
+        - {{this.host}}: {{this.mechanism}} (Status: {{this.status}})
+        {{/each}}
+      - **Persistence Artefacts:** 
+        {{#each artefacts}}
+        - {{this.path}} (Hash: `{{this.hash}}`)
+        {{/each}}
+      - **C2 Communication Ready:** {{c2_ready}}
+      - **Monitoring Hooks:** {{monitoring_hooks}}
+      - **Cleanup Instructions:** {{cleanup_instructions}}

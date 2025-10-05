@@ -1,29 +1,29 @@
 ﻿# <!-- Powered by BMAD(R) Core -->
 ---
 template:
-  id: objectives-report
-  name: Actions on Objectives Report
-  version: 1.1
-  description: Simulated objective execution summary
+  id: impact-report
+  name: Impact Demonstration & Evidence Report
+  version: 1.2
+  description: Live proof-of-concept execution, evidence, and business impact validation from authorized red team operations
   output:
     format: markdown
-    filename: "docs/red-team/objectives-report.md"
+    filename: "docs/red-team/impact-report.md"
 
 workflow:
   mode: interactive
   elicitation: advanced-elicitation
   custom_elicitation:
-    title: "Objectives Elicitation Actions"
+    title: "Impact Validation Actions"
     options:
-      - "Refine success criteria for an objective"
-      - "Plan additional evidence capture"
-      - "Assess business impact and stakeholder messaging"
-      - "Identify defensive gaps exposed during execution"
-      - "Design follow-up tabletop or remediation task"
-      - "Validate cleanup and data-handling steps"
-      - "Capture lessons learned and next steps"
-      - "Highlight blue-team collaboration opportunities"
-      - "Proceed to next section"
+      - "Verify evidence artefacts (logs, screenshots, hashes)"
+      - "Confirm cleanup of all dummy files and artefacts"
+      - "Assess business impact severity per objective"
+      - "Review detection telemetry alignment"
+      - "Validate ATT&CK technique execution"
+      - "Document lessons learned from execution"
+      - "Prepare evidence bundle for final report"
+      - "Coordinate blue-team debrief timing"
+      - "Proceed to final report synthesis"
 
 validation:
   required_sections:
@@ -34,44 +34,63 @@ validation:
 
 sections:
   - id: objectives
-    title: Objectives & Success Criteria
-    instruction: Define goals within ROE.
+    title: Executed Objectives & Success Criteria
+    instruction: Factual summary of authorized PoC actions and business impact goals.
     template: |
       - **Objective:** {{objective}}
         - **ATT&CK Techniques:** {{techniques}}
-        - **Success Criteria:** {{success_criteria}}
-        - **Constraints:** {{constraints}}
+        - **Success Criteria Met:** {{success_criteria_met}} ✅ Yes / ❌ No
+        - **Execution Timestamp:** {{execution_timestamp}} UTC
+        - **ROE Compliance:** {{roe_compliance_status}}
     elicit: true
+
   - id: plan
-    title: Planned Actions (Simulated)
-    instruction: Step-by-step with observables and checkpoints.
+    title: Executed Actions
+    instruction: Real commands and tools used during impact demonstration.
     template: |
       - **Action:** {{action}}
         - **Tooling:** {{tooling}}
-        - **Observables:** {{observables}}
-        - **Evidence Collection:** {{evidence}}
-        - **Contingency:** {{contingency}}
+        - **Command Executed:** `{{command_executed}}`
+        - **Target System:** {{target_system}}
+        - **Observables Generated:** {{observables}}
+        - **Evidence Captured:** 
+          - Log: `{{log_path}}`
+          - Screenshot: `{{screenshot_path}}`
+          - Hash: `{{file_hash}}`
+
   - id: outcomes
-    title: Outcomes & Evidence (Simulated)
-    instruction: Hypothetical results, artifacts, and indicators.
+    title: Verified Outcomes & Evidence
+    instruction: Document real results, artefacts, and business impact.
     template: |
       - **Result:** {{result}}
-        - **Evidence:** {{evidence}}
-        - **Detection Response:** {{detection_response}}
+        - **Business Impact Demonstrated:** {{business_impact}}
+          > "We accessed dummy payroll data → could have stolen 10k real records."
+        - **Evidence Artefacts:** 
+          {{#each evidence_artefacts}}
+          - {{this.type}}: `{{this.path}}` (Hash: `{{this.hash}}`)
+          {{/each}}
+        - **Detection Response Observed:** {{detection_response}}
         - **Lessons Learned:** {{lessons}}
+
   - id: defensive_recs
     title: Defensive Recommendations
-    instruction: Hardening, detections, and playbook improvements.
+    instruction: Actionable hardening and detection improvements based on real execution.
     template: |
-      - **Gap:** {{gap}}
+      - **Gap Observed:** {{gap}}
         - **Recommendation:** {{recommendation}}
+        - **Detection Rule (Sigma/Query):** `{{detection_rule}}`
         - **Owner:** {{owner}}
-        - **Follow-up Date:** {{follow_up}}
+        - **Priority:** {{priority}} (Critical / High / Medium)
+
   - id: closeout
-    title: Engagement Closeout
-    instruction: Lessons learned, constraints, and next steps.
+    title: Engagement Closeout & Cleanup
+    instruction: Confirm safe termination and readiness for final reporting.
     template: |
       - **Summary:** {{summary}}
-      - **Cleanup Actions:** {{cleanup_actions}}
-      - **Stakeholder Briefing:** {{stakeholder_briefing}}
-      - **Next Steps:** {{next_steps}}
+      - **Cleanup Verified:** {{cleanup_verified}} ✅ Yes / ⚠️ Partial
+      - **Cleanup Evidence:** `{{cleanup_log_path}}`
+      - **Stakeholder Briefing Ready:** {{briefing_ready}}
+      - **Next Steps:** 
+        - Final Report Synthesis
+        - Blue Team Debrief
+        - Remediation Tracking

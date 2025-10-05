@@ -1,0 +1,111 @@
+﻿# <!-- Powered by BMAD(R) Core -->
+
+template:
+  id: c2-report
+  name: Command & Control Execution Report
+  version: 1.2
+  description: Live C2 infrastructure status, beacon profiles, and telemetry for authorized red team operations
+  output:
+    format: markdown
+    filename: "docs/red-team/c2-report.md"
+
+workflow:
+  mode: interactive
+  elicitation: advanced-elicitation
+  custom_elicitation:
+    title: "C2 Validation Actions"
+    options:
+      - "Verify live listener status (netstat, ss, curl)"
+      - "Confirm beacon profile hash and functionality"
+      - "Review certificate and TLS configuration"
+      - "Validate kill-switch effectiveness"
+      - "Check detection telemetry alignment"
+      - "Assess fallback channel readiness"
+      - "Document open risks or deployment failures"
+      - "Align findings with defender logs"
+      - "Proceed to next phase"
+
+validation:
+  required_sections:
+    - channels
+    - detections
+    - handoff
+
+sections:
+  - id: overview
+    title: Execution Overview
+    instruction: Factual summary of deployed C2 infrastructure.
+    template: |
+      - **Objective:** {{objective}}
+      - **Deployed Protocols:** {{protocols}}
+      - **Execution Timestamp:** {{execution_timestamp}} UTC
+      - **ROE Compliance:** {{roe_compliance_status}}
+      - **Lab-Safe Infrastructure Used:** {{lab_safe_infra_used}}
+
+  - id: channels
+    title: Live C2 Channels
+    instruction: Report actual deployed listeners and beacon profiles.
+    template: |
+      - **Profile Name:** {{profile_name}}
+        - **Tooling:** {{tooling}}
+        - **Listener Endpoint:** {{listener_endpoint}}
+        - **Listener Status:** {{listener_status}} ✅ Active / ⚠️ Partial / ❌ Failed
+        - **Beacon Profile Path:** `{{beacon_path}}`
+        - **SHA256 Hash:** `{{beacon_hash}}`
+        - **Certificate Path:** `{{cert_path}}`
+        - **Verification Output:** 
+          ```text
+          {{verification_output}}
+          ```
+        - **Beacon Cadence:** {{cadence}}
+        - **Kill-Switch Command:** `{{kill_command}}`
+        - **Log File:** `{{log_path}}`
+    elicit: true
+
+  - id: opsec
+    title: OPSEC Validation
+    instruction: Document real-world noise, blending, and hygiene.
+    template: |
+      - **Risk Observed:** {{risk}}
+        - **Mitigation Applied:** {{mitigation}}
+        - **Monitoring Status:** {{monitoring_status}}
+        - **Notes:** {{notes}}
+
+  - id: detections
+    title: Observed & Expected Telemetry
+    instruction: Link C2 to actual or expected defender alerts.
+    template: |
+      - **Telemetry Source:** {{source}} (e.g., Zeek, Proxy, EDR)
+        - **Observable:** {{observable}}
+        - **Detection Status:** {{detection_status}} (Observed / Expected)
+        - **Log Sample:** 
+          ```log
+          {{log_sample}}
+          ```
+        - **Sigma Rule / Query:** `{{detection_query}}`
+
+  - id: resiliency
+    title: Resiliency & Contingency Status
+    instruction: Confirm fallback channels and activation readiness.
+    template: |
+      - **Scenario:** {{scenario}}
+        - **Fallback Channel:** {{fallback}}
+        - **Activation Status:** {{activation_status}} (Ready / Not Tested)
+        - **Teardown Verified:** {{teardown_verified}} (Yes / No)
+        - **Cleanup Command:** `{{cleanup_command}}`
+
+  - id: handoff
+    title: Handoff to Actions on Objectives
+    instruction: Provide confirmed C2 details for mission execution.
+    template: |
+      - **Active Listeners:** 
+        {{#each active_listeners}}
+        - {{this.profile}}: {{this.endpoint}} (Status: {{this.status}})
+        {{/each}}
+      - **Beacon Artefacts:** 
+        {{#each beacon_artefacts}}
+        - {{this.name}}: `{{this.path}}` (Hash: `{{this.hash}}`)
+        {{/each}}
+      - **Authentication Requirements:** {{auth_requirements}}
+      - **Monitoring Hooks:** {{monitoring_hooks}}
+      - **Next Steps:** {{next_steps}}

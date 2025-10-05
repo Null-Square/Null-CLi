@@ -62,9 +62,9 @@ workflow:
         - docs/red-team/payload-report.md
       uses:
         task: delivery-phase
-        template: delivery-plan
+        template: delivery-report
       outputs:
-        - docs/red-team/delivery-plan.md
+        - docs/red-team/delivery-report.md
         - build/infrastructure/
         - reports/delivery/
       notes: |
@@ -76,7 +76,7 @@ workflow:
       agent: exploitation
       requires:
         - docs/red-team/recon-report.md
-        - docs/red-team/delivery-plan.md
+        - docs/red-team/delivery-report.md
       uses:
         task: exploitation-phase
         template: exploit-report
@@ -94,9 +94,9 @@ workflow:
         - docs/red-team/exploit-report.md
       uses:
         task: installation-phase
-        template: persistence-plan
+        template: persistence-report
       outputs:
-        - docs/red-team/persistence-plan.md
+        - docs/red-team/persistence-report.md
         - reports/installation/
       notes: |
         Establish authorized persistence mechanisms. Log artefacts, registry keys, or cron jobs.
@@ -106,12 +106,12 @@ workflow:
       title: Command and Control
       agent: c2
       requires:
-        - docs/red-team/persistence-plan.md
+        - docs/red-team/persistence-report.md
       uses:
         task: c2-phase
-        template: c2-plan
+        template: c2-report
       outputs:
-        - docs/red-team/c2-plan.md
+        - docs/red-team/c2-report.md
         - build/c2/
         - reports/c2/
       notes: |
@@ -122,7 +122,7 @@ workflow:
       title: Actions on Objectives
       agent: actions-on-objectives
       requires:
-        - docs/red-team/c2-plan.md
+        - docs/red-team/c2-report.md
       uses:
         task: objectives-phase
         template: objectives-report
@@ -136,10 +136,10 @@ workflow:
   outputs:
     - docs/red-team/recon-report.md
     - docs/red-team/payload-report.md
-    - docs/red-team/delivery-plan.md
+    - docs/red-team/delivery-report.md
     - docs/red-team/exploit-report.md
-    - docs/red-team/persistence-plan.md
-    - docs/red-team/c2-plan.md
+    - docs/red-team/persistence-report.md
+    - docs/red-team/c2-report.md
     - docs/red-team/objectives-report.md
     - reports/          # All raw logs and artefacts
     - build/            # All generated payloads, lures, configs
@@ -150,7 +150,7 @@ workflow:
       docs/red-team/recon-report.md. Confirm ROE alignment before building payloads.
     weaponization_to_delivery: |
       Payload and lure artefacts generated in build/payloads/ and build/lures/.
-      Delivery infrastructure can now be deployed using docs/red-team/delivery-plan.md.
+      Delivery infrastructure can now be deployed using docs/red-team/delivery-report.md.
     delivery_to_exploitation: |
       Delivery infrastructure is live: {{active_channels}}.
       Payloads available at {{payload_paths}}. Begin exploitation with monitoring enabled.

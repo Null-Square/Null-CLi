@@ -12,6 +12,7 @@ agents:
   - installation
   - c2
   - actions-on-objectives
+  - static-analysis
 
 workflows:
   - red-team-kill-chain

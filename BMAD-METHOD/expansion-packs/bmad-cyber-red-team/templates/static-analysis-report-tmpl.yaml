@@ -1,0 +1,139 @@
+# <!-- Powered by BMAD(R) Core -->
+---
+template:
+  id: static-analysis-report
+  name: Static Analysis Report
+  version: 1.0
+  description: Static code analysis results with vulnerability findings and remediation guidance
+  output:
+    format: markdown
+    filename: "docs/red-team/static-analysis-report.md"
+
+workflow:
+  mode: interactive
+  elicitation: advanced-elicitation
+  custom_elicitation:
+    title: "Static Analysis Findings Review"
+    options:
+      - "Validate vulnerability severity ratings"
+      - "Confirm remediation steps are actionable"
+      - "Review MITRE ATT&CK technique mappings"
+      - "Assess business impact of findings"
+      - "Prioritize findings for remediation"
+      - "Identify false positives in results"
+      - "Plan re-scan after fixes"
+      - "Document tool limitations"
+      - "Proceed to recommendations"
+
+validation:
+  required_sections:
+    - summary
+    - findings
+    - remediation
+    - handoff
+
+sections:
+  - id: summary
+    title: Static Analysis Summary
+    instruction: High-level overview of the analysis performed and key findings.
+    template: |
+      - **Target Program:** {{target_program}}
+      - **Analysis Date:** {{analysis_timestamp}} UTC
+      - **Operating System:** {{operating_system}}
+      - **Analysis Tools Used:** {{tools_used}}
+      - **Total Lines of Code:** {{loc_count}}
+      - **Total Vulnerabilities Found:** {{total_vulnerabilities}}
+      - **Critical:** {{critical_count}} | High: {{high_count}} | Medium: {{medium_count}} | Low: {{low_count}}
+
+  - id: methodology
+    title: Analysis Methodology
+    instruction: Document the tools and techniques used for static analysis.
+    template: |
+      - **Operating System:** {{operating_system}}
+      - **Tools Executed:**
+        {{#each tools_executed}}
+        - {{this.name}}: `{{this.command}}`
+        {{/each}}
+      - **Analysis Scope:** {{analysis_scope}}
+      - **Limitations:** {{analysis_limitations}}
+      - **ROE Compliance:** {{roe_compliance_status}}
+
+  - id: findings
+    title: Vulnerability Findings
+    instruction: Detailed list of vulnerabilities with severity, location, and description.
+    template: |
+      {{#each vulnerability_findings}}
+      - **Vulnerability:** {{this.title}}
+        - **Severity:** {{this.severity}} 
+        - **CWE ID:** {{this.cwe_id}}
+        - **MITRE ATT&CK:** {{this.mitre_attack}}
+        - **Location:** `{{this.file_path}}:{{this.line_number}}`
+        - **Description:** {{this.description}}
+        - **Evidence:** 
+          ```
+          {{this.code_snippet}}
+          ```
+        - **Risk Level:** {{this.risk_level}}
+        - **CVSS Score:** {{this.cvss_score}} (if applicable)
+        - **Status:** {{this.status}} (New/Confirmed/False Positive)
+      {{/each}}
+    elicit: true
+
+  - id: analysis_details
+    title: Detailed Analysis Results
+    instruction: Breakdown of findings by category and tool used.
+    template: |
+      - **By Category:**
+        {{#each vulnerabilities_by_category}}
+        - {{this.category}}: {{this.count}} vulnerabilities
+        {{/each}}
+      
+      - **By Tool:**
+        {{#each findings_by_tool}}
+        - {{this.tool}}: {{this.count}} findings
+        {{/each}}
+
+  - id: remediation
+    title: Remediation Guidance
+    instruction: Specific recommendations to address identified vulnerabilities.
+    template: |
+      {{#each remediation_steps}}
+      - **For {{this.vulnerability_type}}:**
+        - **Immediate Action:** {{this.immediate_action}}
+        - **Implementation:** {{this.implementation}}
+        - **Verification:** {{this.verification_method}}
+        - **Priority:** {{this.priority}}
+      {{/each}}
+      
+      - **Security Best Practices:**
+        {{#each best_practices}}
+        - {{this.practice}}
+        {{/each}}
+
+  - id: verification
+    title: Verification Recommendations
+    instruction: Suggest methods to verify fixes and prevent similar issues.
+    template: |
+      - **Testing Strategy:** {{testing_strategy}}
+      - **Additional Scans:** {{additional_scans}}
+      - **Code Review Checklist:** {{review_checklist}}
+      - **Security Training Needs:** {{training_needs}}
+
+  - id: impact
+    title: Business Impact Assessment
+    instruction: Evaluate the potential impact of identified vulnerabilities.
+    template: |
+      - **High Risk Areas:** {{high_risk_areas}}
+      - **Potential Impact:** {{potential_impact}}
+      - **Exposure Level:** {{exposure_level}}
+      - **Threat Scenarios:** {{threat_scenarios}}
+
+  - id: handoff
+    title: Next Steps
+    instruction: Outline recommended actions following the static analysis.
+    template: |
+      - **Immediate Actions:** {{immediate_actions}}
+      - **Re-scan Schedule:** {{rescan_schedule}}
+      - **Follow-up Activities:** {{follow_up_activities}}
+      - **Handoff to:** {{next_phase}}
+      - **Reference Documents:** {{related_documents}}

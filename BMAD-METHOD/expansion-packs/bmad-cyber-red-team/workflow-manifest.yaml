@@ -6,6 +6,7 @@
   persistence-plan: templates/persistence-report-tmpl.yaml
   c2-plan: templates/c2-report-tmpl.yaml
   objectives-report: templates/objectives-report-tmpl.yaml
+  static-analysis-report: templates/static-analysis-report-tmpl.yaml
 
 tasks:
   recon-phase: tasks/recon-phase.md
@@ -15,3 +16,4 @@ tasks:
   installation-phase: tasks/installation-phase.md
   c2-phase: tasks/c2-phase.md
   objectives-phase: tasks/objectives-phase.md
+  static-analysis-phase: tasks/static-analysis-phase.md

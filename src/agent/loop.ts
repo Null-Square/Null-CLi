@@ -11,9 +11,11 @@ import { createPublicToolRegistry, invokeTool } from "../tools/registry.js";
 import type { ToolContext } from "../tools/toolTypes.js";
 
 export type ScanMode = "quick" | "standard" | "deep";
+export type WorkflowMode = "pentest" | "compliance";
 
 export type AgentEvent =
   | { type: "step"; step: number; maxSteps: number }
+  | { type: "model"; delta: string; preview: string }
   | { type: "tool"; tool: string; ok: boolean; reason?: string }
   | { type: "finding"; severity: string; title: string }
   | { type: "note"; title: string }
@@ -32,9 +34,11 @@ export interface AgentRunOptions {
   maxSteps?: number;
   allowShell?: boolean;
   framework?: string;
+  workflow?: WorkflowMode;
   scanMode?: ScanMode;
   scanModeGuidance?: string;
   dryRun?: boolean;
+  streamModel?: boolean;
   log?: (message: string) => void;
   onEvent?: (event: AgentEvent) => void;
 }
@@ -77,6 +81,7 @@ const createDryRunState = async (options: AgentRunOptions, workspaceDir: string)
     title: "Dry run plan",
     content: [
       `No model call was made (scan mode: ${options.scanMode ?? "standard"}).`,
+      `Workflow: ${options.workflow ?? "pentest"}.`,
       "Suggested public flow: browser_action/goto, http_request, scanner_run where authorized,",
       "attach_evidence, report_finding for confirmed observations, map_compliance, finish_assessment.",
     ].join(" "),
@@ -114,6 +119,7 @@ export const runPublicAgent = async (options: AgentRunOptions): Promise<Assessme
       role: "user",
       content: [
         `Target: ${options.target}`,
+        `Workflow: ${options.workflow ?? "pentest"}`,
         `Goal: ${options.goal}`,
         `Workspace: ${workspaceDir}`,
         `Scan mode: ${scanMode}`,
@@ -130,11 +136,17 @@ export const runPublicAgent = async (options: AgentRunOptions): Promise<Assessme
   for (let step = 0; step < maxSteps && !state.completed; step += 1) {
     log(`agent step ${step + 1}/${maxSteps}`);
     emit({ type: "step", step: step + 1, maxSteps });
+    let preview = "";
     const content = await createChatCompletion({
       apiKey: options.apiKey,
       baseUrl: options.baseUrl,
       model: options.model ?? process.env.NULL_AI_MODEL ?? process.env.OPENAI_MODEL ?? "gpt-4.1-mini",
       messages,
+      stream: options.streamModel === true,
+      onToken: (delta) => {
+        preview = `${preview}${delta}`.replace(/\s+/g, " ").slice(-160);
+        emit({ type: "model", delta, preview });
+      },
     });
     messages.push({ role: "assistant", content });
     const request = extractJson(content);

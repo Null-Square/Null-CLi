@@ -3,19 +3,18 @@ import process from "node:process";
 import type { AgentEvent } from "../agent/loop.js";
 import { accent, colors, severityTag } from "./brand.js";
 
-const FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+const FRAMES = ["|", "/", "-", "\\"];
 
 const clip = (value: string, max: number): string =>
-  value.length > max ? `${value.slice(0, Math.max(1, max - 1))}…` : value;
+  value.length > max ? `${value.slice(0, Math.max(1, max - 1))}...` : value;
 
 export interface LiveReporter {
   onEvent: (event: AgentEvent) => void;
   stop: () => void;
 }
 
-// A small strix-style live status line. On a TTY it animates a spinner with the
-// current step and last action, and prints findings as they land. In non-TTY
-// (CI) it degrades to plain, dim, one-line-per-event output.
+// Small live status line. On a TTY it animates one status row; in CI it degrades
+// to sparse one-line events so logs stay readable.
 export const createLiveReporter = (label: string): LiveReporter => {
   const stream = process.stderr;
   const tty = Boolean(stream.isTTY) && process.env.NO_COLOR !== "1";
@@ -34,9 +33,7 @@ export const createLiveReporter = (label: string): LiveReporter => {
     const spin = accent(FRAMES[frame % FRAMES.length]);
     const stepText = maxSteps ? colors.dim(`step ${step}/${maxSteps}`) : colors.dim("working");
     clearLine();
-    stream.write(
-      `${spin} ${colors.muted(label)} ${colors.dim("·")} ${stepText} ${colors.dim("·")} ${colors.muted(clip(last, 42))}`,
-    );
+    stream.write(`${spin} ${colors.muted(label)} ${colors.dim("|")} ${stepText} ${colors.dim("|")} ${colors.muted(clip(last, 42))}`);
   };
 
   const println = (line: string): void => {
@@ -60,12 +57,16 @@ export const createLiveReporter = (label: string): LiveReporter => {
         maxSteps = event.maxSteps;
         last = "thinking";
         if (tty) renderStatus();
-        else println(`${colors.dim("·")} ${colors.muted(`step ${event.step}/${event.maxSteps}`)}`);
+        else println(`${colors.dim("-")} ${colors.muted(`step ${event.step}/${event.maxSteps}`)}`);
+        break;
+      case "model":
+        last = `model: ${event.preview}`;
+        if (tty) renderStatus();
         break;
       case "tool":
-        last = event.reason ? `${event.tool} — ${event.reason}` : event.tool;
+        last = event.reason ? `${event.tool} - ${event.reason}` : event.tool;
         if (tty) renderStatus();
-        else println(`${colors.dim("·")} ${colors.muted(event.tool)}${event.ok ? "" : colors.dim(" (failed)")}`);
+        else println(`${colors.dim("-")} ${colors.muted(event.tool)}${event.ok ? "" : colors.dim(" (failed)")}`);
         break;
       case "finding":
         println(`  ${severityTag(event.severity)} ${colors.fg(clip(event.title, 52))}`);

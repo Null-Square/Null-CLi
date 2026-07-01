@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         Contributions should keep the [public boundary](../blob/main/docs/public-boundary.md)
-        intact — the OSS layer stays scoped and safe by design.
+        intact. The OSS layer stays scoped and safe by design.
   - type: textarea
     id: problem
     attributes:

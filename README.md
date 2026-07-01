@@ -1,6 +1,6 @@
 <div align="center">
 
-![NullSquare autonomous offensive security testing](docs/assets/nullsquare-cover.png)
+![NullSquare autonomous offensive security testing](https://raw.githubusercontent.com/Null-Square/Null-CLi/main/docs/assets/nullsquare-cover.png)
 
 # Null AI CLI
 
@@ -20,7 +20,7 @@ A scoped terminal agent for authorized testing: safe reconnaissance, scanner orc
 
 **Coverage:** OWASP Top 10 | PCI DSS lite | ISO 27001 lite | NIST CSF lite
 
-![Null AI CLI running a scoped assessment](docs/assets/null-ai-cli-run.svg)
+![Null AI CLI running a scoped assessment](https://raw.githubusercontent.com/Null-Square/Null-CLi/main/docs/assets/null-ai-cli-run.svg)
 
 </div>
 
@@ -28,7 +28,7 @@ A scoped terminal agent for authorized testing: safe reconnaissance, scanner orc
 
 Modern teams need security feedback that is faster than a traditional pentest and more useful than raw scanner output. Null AI CLI is the open-source layer: a reproducible command-line framework for local assessments, scanner normalization, evidence capture, reports, and readiness mapping.
 
-It is intentionally separate from the NullSquare managed platform — the public repo is useful on its own while keeping managed-platform internals out of scope. For hosted sandboxes, team workflows, dashboards, continuous testing, and enterprise reporting, see **[nullsquare.net](https://nullsquare.net)**.
+It is intentionally separate from the NullSquare managed platform. The public repo is useful on its own while keeping managed-platform internals out of scope. For hosted sandboxes, team workflows, dashboards, continuous testing, and enterprise reporting, see **[nullsquare.net](https://nullsquare.net)**.
 
 ## Install
 
@@ -57,20 +57,21 @@ node dist/cli/index.js --help
 
 </details>
 
-Binaries after install: `null-ai`, `null`, `nullsquare` (all identical).
+Binaries after install: `null-ai`, `null-cli`, `null`, `nullsquare` (all identical).
 
 ## Quick Start
 
 ```bash
-# 1. Offline dry-run — builds the assessment structure, no model call, no key needed
+# 1. Offline dry-run: builds the assessment structure, no model call, no key needed
 null-ai agent run --target https://example.com --dry-run --out .null/example
 
-# 2. Live assessment — set an OpenAI-compatible key first
+# 2. Live assessment: set an OpenAI-compatible key first
 export NULL_AI_API_KEY="your-api-key"
 export NULL_AI_MODEL="gpt-4.1-mini"
 
 null-ai agent run \
   --target https://example.com \
+  --workflow compliance \
   --goal "Scoped web assessment with compliance-readiness mapping" \
   --scan-mode deep \
   --framework pci-dss-lite \
@@ -81,45 +82,49 @@ null-ai agent run \
 
 ## Interactive Mode
 
-Run `null-ai` with no arguments to open a **guided, persistent session** — set up your
-environment, declare target scope and rules of engagement, run assessments, and review
-findings without re-typing flags:
+Run `null-ai` with no arguments to open a **guided, persistent session**: choose
+`pentest` or `compliance` workflow, declare target scope and rules of engagement,
+run assessments, and review findings without re-typing flags:
 
 ```text
 null-ai
 
-null-ai › /target https://app.example
-null-ai › /scope Authorized web app test — prod DB out of scope
-null-ai › /mode deep
-null-ai › /framework pci-dss-lite
-null-ai › /authorize          # confirm you are permitted to test the scope
-null-ai › /run                # live assessment with real-time output
-null-ai › /findings           # review results (persisted for later)
+null-ai > /workflow compliance
+null-ai > /target https://app.example
+null-ai > /scope Authorized web app test - prod DB out of scope
+null-ai > /depth deep
+null-ai > /framework pci-dss-lite
+null-ai > /authorize          # confirm you are permitted to test the scope
+null-ai > /run                # live assessment with real-time output
+null-ai > /findings           # review results (persisted for later)
 ```
 
 | Command | Purpose |
 |---------|---------|
-| `/target <t>` · `/targets [clear]` | Manage scope (repeatable) |
-| `/scope <text>` · `/authorize` | Declare rules of engagement and confirm authorization |
-| `/mode` · `/framework` · `/shell on\|off` | Configure the run |
+| `/wizard` | First-run guided setup |
+| `/workflow pentest\|compliance` | Choose assessment workflow |
+| `/depth quick\|standard\|deep` | Choose scan depth |
+| `/target <t>` / `/targets [clear]` | Manage scope (repeatable) |
+| `/scope <text>` / `/authorize` | Declare rules of engagement and confirm authorization |
+| `/framework` / `/shell on\|off` / `/stream on\|off` | Configure the run |
 | `/env model\|key\|base <v>` | Set model / API key (key stays in memory, never written to disk) |
-| `/run` · `/findings` · `/report` · `/compliance` | Run and review |
-| `/status` · `/help` · `/exit` | Session control (config is saved between sessions) |
+| `/run` / `/findings` / `/report` / `/compliance` / `/open report` | Run and review |
+| `/status` / `/help` / `/exit` | Session control (config is saved between sessions) |
 
 A live/scanner run is **gated behind `/authorize`**, and the session file never stores your API key.
 
 ## Key Capabilities
 
-- **Guided interactive session** — persistent REPL to set scope/RoE, run, and review findings.
-- **Scoped single-agent loop** — one safe action per turn, hard scope boundaries, evidence-first reporting.
-- **Scan modes** — `--scan-mode quick | standard | deep` trade speed for coverage.
-- **Multi-target** — repeat `--target` to assess several assets in one command.
-- **Live terminal UX** — branded NullSquare panels with real-time step, tool, and finding output.
-- **Scanner ingestion** — normalize `nuclei`, `semgrep`, and `trivy` JSON/JSONL into unified findings.
-- **Engineer-ready outputs** — Markdown reports and SARIF for code scanning / CI.
-- **Compliance readiness** — map findings to `owasp-top10`, `pci-dss-lite`, `iso27001-lite`, `nist-csf-lite`.
-- **Docker sandbox** — reproducible scanner runtime with a toolchain smoke test.
-- **Public skill packs** — markdown skills for scan modes, tooling, vuln classes, and compliance.
+- **Guided interactive session** - persistent REPL with setup wizard, tab completion, workflow modes, and report opening.
+- **Scoped single-agent loop** - one safe action per turn, hard scope boundaries, evidence-first reporting.
+- **Scan modes** - `--scan-mode quick | standard | deep` trade speed for coverage.
+- **Multi-target** - repeat `--target` to assess several assets in one command.
+- **Live terminal UX** - branded NullSquare panels with real-time step, tool, and finding output.
+- **Scanner ingestion** - normalize `nuclei`, `semgrep`, and `trivy` JSON/JSONL into unified findings.
+- **Engineer-ready outputs** - Markdown reports and SARIF for code scanning / CI.
+- **Compliance readiness** - map findings to `owasp-top10`, `pci-dss-lite`, `iso27001-lite`, `nist-csf-lite`.
+- **Docker sandbox** - reproducible scanner runtime with a toolchain smoke test.
+- **Public skill packs** - markdown skills for scan modes, tooling, vuln classes, and compliance.
 
 ## Toolkit
 
@@ -143,7 +148,7 @@ A live/scanner run is **gated behind `/authorize`**, and the session file never 
 | Transport & Session | Missing HSTS, insecure cookies |
 | Disclosure | Sensitive data / error leakage |
 
-> Deep validation, exploit-chaining, and advanced heuristics live only in the managed NullSquare platform — this OSS layer focuses on safe, evidence-backed discovery.
+> Deep validation, exploit-chaining, and advanced heuristics live only in the managed NullSquare platform. This OSS layer focuses on safe, evidence-backed discovery.
 
 ## Scan Modes
 
@@ -181,7 +186,7 @@ null-ai report generate findings.json --out report.md --sarif findings.sarif --f
 null-ai compliance map findings.json --framework pci-dss-lite --out pci-readiness.json
 ```
 
-Compliance output is readiness support — **not** certification, attestation, or legal advice.
+Compliance output is readiness support, **not** certification, attestation, or legal advice.
 
 ## Sandbox Runtime
 
@@ -220,11 +225,11 @@ Use Null AI CLI only on systems you own or have explicit permission to test. Kee
 
 ## Documentation
 
-- [Architecture](docs/architecture.md) · [CLI reference](docs/cli.md) · [Scan modes](docs/scan-modes.md) · [Compliance](docs/compliance.md) · [Public boundary](docs/public-boundary.md)
+- [Architecture](docs/architecture.md) | [CLI reference](docs/cli.md) | [Scan modes](docs/scan-modes.md) | [Compliance](docs/compliance.md) | [Public boundary](docs/public-boundary.md)
 
 ## Contributing
 
-Contributions that keep the public boundary intact are very welcome — new scanner parsers, public skills, report improvements, and tests. See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
+Contributions that keep the public boundary intact are very welcome: new scanner parsers, public skills, report improvements, and tests. See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
 
 ## License
 

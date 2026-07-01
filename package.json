@@ -1,6 +1,6 @@
 {
   "name": "@nullsquare/null-cli",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "NullSquare-branded open-source AI pentest and compliance readiness framework CLI.",
   "license": "Apache-2.0",
   "type": "module",
@@ -29,9 +29,10 @@
     "nullsquare"
   ],
   "bin": {
-    "null": "./dist/cli/index.js",
-    "null-ai": "./dist/cli/index.js",
-    "nullsquare": "./dist/cli/index.js"
+    "null-cli": "dist/cli/index.js",
+    "null-ai": "dist/cli/index.js",
+    "null": "dist/cli/index.js",
+    "nullsquare": "dist/cli/index.js"
   },
   "publishConfig": {
     "access": "public"

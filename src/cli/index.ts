@@ -27,7 +27,7 @@ import {
 } from "./brand.js";
 import { createLiveReporter } from "./live.js";
 import { runInteractive } from "./interactive.js";
-import type { ScanMode } from "../agent/loop.js";
+import type { ScanMode, WorkflowMode } from "../agent/loop.js";
 
 interface ParsedArgs {
   positionals: string[];
@@ -73,6 +73,12 @@ const targetSlug = (target: string): string =>
     .slice(0, 60) || "target";
 
 const SCAN_MODES = new Set(["quick", "standard", "deep"]);
+const WORKFLOWS = new Set(["pentest", "compliance"]);
+
+const defaultGoalForWorkflow = (workflow: WorkflowMode): string =>
+  workflow === "compliance"
+    ? "Assess scoped evidence and map findings to compliance-readiness controls."
+    : "Perform a scoped pentest and produce evidence-backed findings.";
 
 const flagString = (flags: Record<string, string | boolean>, key: string, fallback?: string): string | undefined => {
   const value = flags[key];
@@ -111,8 +117,8 @@ const usage = (version: string): string => [
   "",
   section("Commands"),
   `  ${colorCommand("interactive")} ${colors.dim("(or just")} ${colorCommand("null-ai")}${colors.dim(")")}   guided session: set scope/RoE, run, review findings`,
-  `  ${colorCommand("agent run")} --target <url|host|path> [--target ...] [--scan-mode quick|standard|deep]`,
-  `    ${colors.dim("[--goal <text>] [--framework <id>] [--out .null/run] [--allow-shell] [--dry-run]")}`,
+  `  ${colorCommand("agent run")} --target <url|host|path> [--workflow pentest|compliance] [--scan-mode quick|standard|deep]`,
+  `    ${colors.dim("[--goal <text>] [--framework <id>] [--out .null/run] [--allow-shell] [--dry-run] [--stream]")}`,
   `  ${colorCommand("null-ai sandbox verify")} [--manifest <path>]`,
   `  ${colorCommand("null-ai ingest")} <file-or-dir> --out findings.json`,
   `  ${colorCommand("null-ai report generate")} <findings.json> --out report.md [--sarif findings.sarif]`,
@@ -125,7 +131,7 @@ const usage = (version: string): string => [
   "  NULL_AI_BASE_URL or OPENAI_BASE_URL",
   "  NULL_AI_MODEL or OPENAI_MODEL",
   "",
-  colors.gray(`Aliases: null, null-ai, nullsquare  |  Version: ${version}`),
+  colors.gray(`Aliases: null-ai, null-cli, null, nullsquare  |  Version: ${version}`),
 ].join("\n");
 
 const readVersion = async (): Promise<string> => {
@@ -147,15 +153,20 @@ const commandAgentRun = async (parsed: ParsedArgs): Promise<void> => {
   const targets = collectStrings(parsed, "target");
   if (targets.length === 0) throw new Error("Missing required value: --target");
 
-  const goal = flagString(flags, "goal", "Perform a scoped shallow pentest and produce evidence-backed findings.")!;
+  const workflow = (flagString(flags, "workflow", "pentest") ?? "pentest").toLowerCase();
+  if (!WORKFLOWS.has(workflow)) {
+    throw new Error(`Unknown --workflow "${workflow}". Use pentest or compliance.`);
+  }
+
+  const goal = flagString(flags, "goal", defaultGoalForWorkflow(workflow as WorkflowMode))!;
   const baseOut = flagString(flags, "out", ".null/run")!;
   const framework = flagString(flags, "framework", "owasp-top10")!;
   const apiKey = flagString(flags, "api-key") ?? process.env.NULL_AI_API_KEY ?? process.env.OPENAI_API_KEY;
   const dryRun = flags["dry-run"] === true || !apiKey;
 
-  const scanMode = (flagString(flags, "scan-mode", "standard") ?? "standard").toLowerCase();
+  const scanMode = (flagString(flags, "scan-mode") ?? flagString(flags, "depth", "standard") ?? "standard").toLowerCase();
   if (!SCAN_MODES.has(scanMode)) {
-    throw new Error(`Unknown --scan-mode "${scanMode}". Use quick, standard, or deep.`);
+    throw new Error(`Unknown scan depth "${scanMode}". Use quick, standard, or deep (--scan-mode / --depth).`);
   }
 
   // Load the matching public scan-mode skill so its guidance shapes the run.
@@ -183,9 +194,11 @@ const commandAgentRun = async (parsed: ParsedArgs): Promise<void> => {
         maxSteps: parsed.all["max-steps"] ? flagNumber(flags, "max-steps", 8) : undefined,
         allowShell: flags["allow-shell"] === true,
         framework,
+        workflow: workflow as WorkflowMode,
         scanMode: scanMode as ScanMode,
         scanModeGuidance: scanModeSkill?.content,
         dryRun: flags["dry-run"] === true,
+        streamModel: flags.stream === true,
         onEvent: reporter.onEvent,
       });
       states.push(state);

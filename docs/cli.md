@@ -16,16 +16,21 @@ Session commands:
 
 | Command | Purpose |
 |---------|---------|
-| `/target <t>` · `/targets [clear]` | Add / list / clear targets (scope is repeatable) |
-| `/goal <text>` · `/scope <text>` | Set the assessment goal and a rules-of-engagement note |
-| `/mode quick\|standard\|deep` | Set scan depth |
+| `/wizard` | Guided setup for workflow, target, scope, depth, framework, and scanner policy |
+| `/workflow pentest\|compliance` | Choose workflow mode |
+| `/mode pentest\|compliance` | Alias for workflow mode; `/mode quick\|standard\|deep` remains a depth alias |
+| `/depth quick\|standard\|deep` | Set scan depth |
+| `/target <t>` / `/targets [clear]` | Add / list / clear targets (scope is repeatable) |
+| `/goal <text>` / `/scope <text>` | Set the assessment goal and a rules-of-engagement note |
 | `/framework <id>` | Set compliance framework |
 | `/shell on\|off` | Allow scanner/shell execution (in-scope assets only) |
-| `/authorize` | Confirm you are authorized — required before any live or scanner run |
+| `/stream on\|off` | Stream model progress into the live status line |
+| `/authorize` / `/deauthorize` | Confirm or clear authorization; required before any live or scanner run |
 | `/env model\|key\|base <v>` | Set model / API key / base URL (the key stays in memory, never saved) |
 | `/run` | Start the assessment with live output |
-| `/findings` · `/report` · `/compliance` | Review results (persisted in the workspace) |
-| `/status` · `/help` · `/clear` · `/exit` | Session control (config is saved to `<out>/session.json`) |
+| `/findings` / `/report` / `/compliance` | Review results (persisted in the workspace) |
+| `/open report\|sarif\|folder` | Open generated output locally |
+| `/status` / `/help` / `/clear` / `/exit` | Session control (config is saved to `<out>/session.json`) |
 
 ## `agent run`
 
@@ -37,13 +42,15 @@ null-ai agent run --target <url|host|path> [options]
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--target <t>` | — | Target to assess. **Repeatable** — pass multiple `--target` for multi-target runs. |
+| `--target <t>` | required | Target to assess. **Repeatable**: pass multiple `--target` for multi-target runs. |
+| `--workflow <mode>` | `pentest` | `pentest` or `compliance`. Shapes the default goal and run context. |
 | `--scan-mode <mode>` | `standard` | `quick`, `standard`, or `deep`. Controls depth / step budget. |
 | `--goal <text>` | scoped shallow pentest | Natural-language objective for the agent. |
 | `--framework <id>` | `owasp-top10` | `owasp-top10`, `pci-dss-lite`, `iso27001-lite`, `nist-csf-lite`. |
 | `--out <dir>` | `.null/run` | Output workspace. For multi-target, each target gets `<out>/<slug>`. |
 | `--allow-shell` | off | Enable scanner/shell execution. Use only for in-scope assets. |
 | `--dry-run` | off | Build assessment structure without calling a model. |
+| `--stream` | off | Stream model progress into the live status line. |
 | `--max-steps <n>` | per scan-mode | Override the agent step budget. |
 | `--model <id>` | env | Model id (else `NULL_AI_MODEL` / `OPENAI_MODEL`). |
 | `--api-key <key>` | env | API key (else `NULL_AI_API_KEY` / `OPENAI_API_KEY`). |
@@ -58,7 +65,7 @@ If no API key is available, the run automatically falls back to **dry-run** mode
 null-ai agent run --target https://example.com --scan-mode quick --dry-run
 
 # Deep live assessment mapped to PCI readiness
-null-ai agent run --target https://example.com --scan-mode deep --framework pci-dss-lite
+null-ai agent run --target https://example.com --workflow compliance --scan-mode deep --framework pci-dss-lite
 
 # Multi-target (writes .null/run/example.com and .null/run/api.example.com)
 null-ai agent run --target https://example.com --target https://api.example.com

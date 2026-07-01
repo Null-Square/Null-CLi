@@ -7,6 +7,14 @@ import { fileURLToPath } from "node:url";
 
 import { runPublicAgent, type ScanMode, type WorkflowMode } from "../agent/loop.js";
 import { mapFindingsToCompliance, normalizeFramework, type ComplianceFramework } from "../compliance/map.js";
+import {
+  activateModelProfile,
+  deleteModelProfile,
+  listModelProfiles,
+  loadModelProfile,
+  saveModelProfile,
+  type ResolvedModelProfile,
+} from "../config/profiles.js";
 import type { Finding } from "../findings/types.js";
 import { ensureWorkspace, readJson, writeJson } from "../runtime/workspace.js";
 import { loadSkillBySlug } from "../skills/loader.js";
@@ -21,9 +29,10 @@ import {
   status,
 } from "./brand.js";
 import { createLiveReporter } from "./live.js";
+import { checkForCliUpdate } from "./update.js";
 
-// Persisted session config. The API key is intentionally not part of this shape,
-// so it is never written to disk. /env key only stores the key in memory.
+// Assessment state and credentials are persisted separately. session.json never
+// contains the API key; the selected profile resolves it from the local vault.
 interface SessionConfig {
   targets: string[];
   goal: string;
@@ -34,6 +43,7 @@ interface SessionConfig {
   authorized: boolean;
   scopeNote: string;
   streamModel: boolean;
+  profile?: string;
   model?: string;
   baseUrl?: string;
   workspaceDir: string;
@@ -62,6 +72,7 @@ const COMMANDS = [
   "/framework",
   "/shell",
   "/stream",
+  "/profile",
   "/authorize",
   "/deauthorize",
   "/env",
@@ -118,13 +129,14 @@ const loadSession = async (workspaceDir: string): Promise<SessionConfig | null> 
 
 const HELP = [
   section("Session"),
-  `  ${accent("/wizard")}                  guided setup       ${accent("/status")}             show configuration`,
+  `  ${accent("/wizard")}                  configure & run    ${accent("/status")}             show configuration`,
   `  ${accent("/target")} <url|host|path>  add target         ${accent("/targets")} [clear]    list / clear targets`,
   `  ${accent("/scope")} <text>            scope / RoE note   ${accent("/authorize")}          confirm authorization`,
   `  ${accent("/workflow")} pentest|compliance                ${accent("/depth")} quick|standard|deep`,
   `  ${accent("/mode")} pentest|compliance  alias for workflow; /mode quick|standard|deep still sets depth`,
   `  ${accent("/framework")} <id>          set mapping        ${accent("/shell")} on|off       allow scanners/shell`,
-  `  ${accent("/stream")} on|off           stream model status ${accent("/env")} model|key|base <v>`,
+  `  ${accent("/profile")} setup|list|use  model credentials  ${accent("/env")} model|key|base <v>`,
+  `  ${accent("/stream")} on|off           stream model status`,
   "",
   section("Run & review"),
   `  ${accent("/run")}                     start assessment   ${accent("/findings")}           list findings`,
@@ -137,6 +149,21 @@ const HELP = [
 
 const ask = (rl: readline.Interface, prompt: string): Promise<string> =>
   new Promise((resolve) => rl.question(prompt, resolve));
+
+const askSecret = async (rl: readline.Interface, prompt: string): Promise<string> => {
+  if (!process.stdin.isTTY || !process.stdout.isTTY) return ask(rl, prompt);
+
+  const terminal = rl as readline.Interface & { _writeToOutput?: (value: string) => void };
+  const original = terminal._writeToOutput;
+  process.stdout.write(prompt);
+  terminal._writeToOutput = () => undefined;
+  try {
+    return await ask(rl, "");
+  } finally {
+    terminal._writeToOutput = original;
+    process.stdout.write("\n");
+  }
+};
 
 const yes = (value: string): boolean => /^(y|yes|true|1)$/i.test(value.trim());
 
@@ -172,6 +199,8 @@ const completer = (line: string): [string[], string] => {
             ? ["on", "off"]
             : cmd === "/env"
               ? ["model", "key", "base"]
+              : cmd === "/profile"
+                ? ["setup", "list", "use", "delete"]
               : cmd === "/open"
                 ? ["report", "sarif", "folder"]
                 : [];
@@ -202,13 +231,21 @@ const openLocalPath = (filePath: string): boolean => {
 };
 
 export const runInteractive = async (workspaceDirArg?: string): Promise<void> => {
+  const updateCheck = checkForCliUpdate().catch(() => null);
   const workspaceDir = workspaceDirArg ?? ".null/session";
   await ensureWorkspace(workspaceDir);
   const loaded = await loadSession(workspaceDir);
   const cfg: SessionConfig = loaded ?? defaultConfig(workspaceDir);
   cfg.workspaceDir = workspaceDir;
+  let profileRef: ResolvedModelProfile | null = await loadModelProfile(cfg.profile).catch(() => null);
+  if (!profileRef && cfg.profile) profileRef = await loadModelProfile().catch(() => null);
+  if (profileRef) {
+    cfg.profile = profileRef.name;
+    cfg.model = profileRef.model;
+    cfg.baseUrl = profileRef.baseUrl;
+  }
   const apiKeyRef: { value?: string } = {
-    value: process.env.NULL_AI_API_KEY ?? process.env.OPENAI_API_KEY,
+    value: process.env.NULL_AI_API_KEY ?? process.env.OPENAI_API_KEY ?? profileRef?.apiKey,
   };
 
   const save = async (): Promise<void> => {
@@ -264,7 +301,8 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
     console.log(`  ${colors.dim("framework")}  ${colors.fg(cfg.framework)}    ${colors.dim("stream")} ${on(cfg.streamModel)}`);
     console.log(`  ${colors.dim("scanners")}   ${on(cfg.allowShell)}    ${colors.dim("authorized")} ${cfg.authorized ? accent("yes") : status("WARN")}`);
     console.log(`  ${colors.dim("scope/RoE")}  ${cfg.scopeNote ? colors.muted(cfg.scopeNote) : colors.dim("(none - /scope <text>)")}`);
-    console.log(`  ${colors.dim("model")}      ${colors.fg(cfg.model ?? process.env.NULL_AI_MODEL ?? process.env.OPENAI_MODEL ?? "gpt-4.1-mini")}    ${colors.dim("api key")} ${apiKeyRef.value ? accent("set") : colors.dim("none -> dry-run")}`);
+    console.log(`  ${colors.dim("profile")}    ${cfg.profile ? colors.fg(cfg.profile) : colors.dim("(not configured)")}`);
+    console.log(`  ${colors.dim("model")}      ${colors.fg(cfg.model ?? process.env.NULL_AI_MODEL ?? process.env.OPENAI_MODEL ?? "gpt-4.1-mini")}    ${colors.dim("api key")} ${apiKeyRef.value ? accent("ready") : status("WARN")}`);
     console.log(`  ${colors.dim("workspace")}  ${accent(path.resolve(workspaceDir))}`);
   };
 
@@ -317,11 +355,18 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
       console.log(status("WARN") + colors.muted(" add a target first: /target <url>"));
       return;
     }
-    const apiKey = apiKeyRef.value;
-    const dryRun = !apiKey;
-    if ((!dryRun || cfg.allowShell) && !cfg.authorized) {
+    if (!cfg.scopeNote) {
+      console.log(status("WARN") + colors.muted(" declare the scope / rules of engagement first: /scope <text>"));
+      return;
+    }
+    if (!cfg.authorized) {
       console.log(status("WARN") + colors.muted(" this run contacts a target or runs scanners."));
       console.log(colors.muted(`  Confirm you are authorized to test ${cfg.targets.join(", ")} - type ${accent("/authorize")}.`));
+      return;
+    }
+    const apiKey = apiKeyRef.value;
+    if (!apiKey) {
+      console.log(`${status("WARN")} ${colors.muted("no API key is available. Run /profile setup before starting.")}`);
       return;
     }
     const skill = await loadSkillBySlug(defaultSkillsRoot(), `scan-mode-${cfg.scanMode}`).catch(() => undefined);
@@ -329,7 +374,7 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
     for (const target of cfg.targets) {
       const runWorkspace = multi ? path.join(workspaceDir, targetSlug(target)) : workspaceDir;
       process.stderr.write(
-        `${renderRunHeader({ target, goal: cfg.goal, framework: cfg.framework, workspaceDir: runWorkspace, mode: dryRun ? "dry-run" : "live", scanMode: cfg.scanMode })}\n`,
+        `${renderRunHeader({ target, goal: cfg.goal, framework: cfg.framework, workspaceDir: runWorkspace, mode: "live", scanMode: cfg.scanMode })}\n`,
       );
       const reporter = createLiveReporter(target);
       try {
@@ -362,14 +407,97 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
     else if (key === "base") cfg.baseUrl = value || undefined;
     else if (key === "key") {
       apiKeyRef.value = value || undefined;
-      console.log(colors.dim(value ? "api key set (memory only, not saved)" : "api key cleared"));
+      console.log(colors.dim(value ? "api key set for this process; use /profile setup to save it" : "api key cleared"));
       return;
     } else {
       console.log(colors.dim("usage: /env model <id> | /env key <value> | /env base <url>"));
       return;
     }
+    console.log(colors.dim(`${key} set for this process; use /profile setup to save it`));
+  };
+
+  const configureProfile = async (rl: readline.Interface): Promise<boolean> => {
+    console.log(section("Model profile"));
+    const currentName = profileRef?.name ?? cfg.profile ?? "default";
+    const name = (await ask(rl, `Profile name (${currentName}): `)).trim() || currentName;
+    const currentModel =
+      profileRef?.model ?? cfg.model ?? process.env.NULL_AI_MODEL ?? process.env.OPENAI_MODEL ?? "gpt-4.1-mini";
+    const model = (await ask(rl, `Model id (${currentModel}): `)).trim() || currentModel;
+    const currentBase = profileRef?.baseUrl ?? cfg.baseUrl ?? process.env.NULL_AI_BASE_URL ?? process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1";
+    const baseUrl = (await ask(rl, `OpenAI-compatible base URL (${currentBase}): `)).trim() || currentBase;
+
+    const existing = await loadModelProfile(name).catch(() => null);
+    const keyPrompt = existing?.apiKey
+      ? "API key (Enter keeps the saved key): "
+      : "API key (required; saved in the encrypted local vault): ";
+    const enteredKey = (await askSecret(rl, keyPrompt)).trim();
+    const environmentKey = process.env.NULL_AI_API_KEY ?? process.env.OPENAI_API_KEY;
+    const apiKey = enteredKey || existing?.apiKey || environmentKey;
+    if (!apiKey) {
+      console.log(`${status("WARN")} ${colors.muted("an API key is required to complete a model profile.")}`);
+      return false;
+    }
+
+    profileRef = await saveModelProfile({ name, model, baseUrl, apiKey: enteredKey || (existing?.apiKey ? undefined : apiKey) });
+    cfg.profile = profileRef.name;
+    cfg.model = profileRef.model;
+    cfg.baseUrl = profileRef.baseUrl;
+    apiKeyRef.value = process.env.NULL_AI_API_KEY ?? process.env.OPENAI_API_KEY ?? profileRef.apiKey;
     await save();
-    console.log(colors.dim(`${key} set`));
+    console.log(`${status("PASS")} ${colors.muted(`profile "${profileRef.name}" saved; API key encrypted locally.`)}`);
+    return true;
+  };
+
+  const ensureProfile = async (rl: readline.Interface): Promise<boolean> => {
+    if (profileRef?.apiKey && apiKeyRef.value) {
+      const keep = await ask(rl, `Use model profile "${profileRef.name}" (${profileRef.model})? [Y/n]: `);
+      if (!/^(n|no)$/i.test(keep.trim())) return true;
+    }
+    return configureProfile(rl);
+  };
+
+  const handleProfile = async (rest: string[], rl: readline.Interface): Promise<void> => {
+    const [action, name] = rest;
+    if (!action || action === "list") {
+      const profiles = await listModelProfiles();
+      if (!profiles.length) {
+        console.log(colors.dim("No model profiles. Run /profile setup."));
+        return;
+      }
+      for (const profile of profiles) {
+        const marker = profile.name === cfg.profile ? accent("*") : " ";
+        console.log(`  ${marker} ${colors.fg(profile.name)} ${colors.dim(profile.model)} ${colors.dim(profile.baseUrl ?? "")}`);
+      }
+      return;
+    }
+    if (action === "setup") {
+      await configureProfile(rl);
+      return;
+    }
+    if (action === "use" && name) {
+      profileRef = await activateModelProfile(name);
+      cfg.profile = profileRef.name;
+      cfg.model = profileRef.model;
+      cfg.baseUrl = profileRef.baseUrl;
+      apiKeyRef.value = process.env.NULL_AI_API_KEY ?? process.env.OPENAI_API_KEY ?? profileRef.apiKey;
+      await save();
+      console.log(`${status("PASS")} ${colors.dim(`using profile "${name}"`)}`);
+      return;
+    }
+    if (action === "delete" && name) {
+      await deleteModelProfile(name);
+      if (cfg.profile === name) {
+        profileRef = await loadModelProfile().catch(() => null);
+        cfg.profile = profileRef?.name;
+        cfg.model = profileRef?.model;
+        cfg.baseUrl = profileRef?.baseUrl;
+        apiKeyRef.value = process.env.NULL_AI_API_KEY ?? process.env.OPENAI_API_KEY ?? profileRef?.apiKey;
+        await save();
+      }
+      console.log(colors.dim(`profile "${name}" deleted`));
+      return;
+    }
+    console.log(colors.dim("usage: /profile setup|list|use <name>|delete <name>"));
   };
 
   const openTarget = async (kind: string): Promise<void> => {
@@ -399,38 +527,69 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
   };
 
   const runWizard = async (rl: readline.Interface): Promise<void> => {
-    await typewrite("Null AI setup");
-    const workflow = (await ask(rl, "Workflow [pentest/compliance] (pentest): ")).trim().toLowerCase();
-    if (WORKFLOWS.has(workflow as WorkflowMode)) {
-      cfg.workflow = workflow as WorkflowMode;
-      cfg.goal = DEFAULT_GOALS[cfg.workflow];
+    await typewrite("Null AI guided assessment");
+    if (!(await ensureProfile(rl))) {
+      console.log(colors.dim("Wizard paused. Run /wizard when the model profile is ready."));
+      return;
     }
 
-    const target = (await ask(rl, "Target URL/host/path (optional): ")).trim();
-    if (target && !cfg.targets.includes(target)) cfg.targets.push(target);
+    console.log(section("Assessment"));
+    const workflow = (await ask(rl, `Workflow [pentest/compliance] (${cfg.workflow}): `)).trim().toLowerCase();
+    if (WORKFLOWS.has(workflow as WorkflowMode)) {
+      const hadDefaultGoal = Object.values(DEFAULT_GOALS).includes(cfg.goal);
+      cfg.workflow = workflow as WorkflowMode;
+      if (hadDefaultGoal) cfg.goal = DEFAULT_GOALS[cfg.workflow];
+    }
 
-    const scope = (await ask(rl, "Scope / rules of engagement note (optional): ")).trim();
+    const goal = (await ask(rl, `Goal (${cfg.goal}): `)).trim();
+    if (goal) cfg.goal = goal;
+
+    const targetDefault = cfg.targets[0] ?? "";
+    const target = (await ask(rl, `Target URL/host/path${targetDefault ? ` (${targetDefault})` : " (required)"}: `)).trim() || targetDefault;
+    if (!target) {
+      console.log(`${status("WARN")} ${colors.muted("a target is required. Wizard paused.")}`);
+      await save();
+      return;
+    }
+    cfg.targets = [target];
+    cfg.authorized = false;
+
+    const scope = (await ask(rl, `Scope / rules of engagement${cfg.scopeNote ? ` (${cfg.scopeNote})` : " (required)"}: `)).trim();
     if (scope) cfg.scopeNote = scope;
+    if (!cfg.scopeNote) {
+      console.log(`${status("WARN")} ${colors.muted("a scope / rules-of-engagement note is required. Wizard paused.")}`);
+      await save();
+      return;
+    }
 
-    const depth = (await ask(rl, "Depth [quick/standard/deep] (standard): ")).trim().toLowerCase();
+    const depth = (await ask(rl, `Depth [quick/standard/deep] (${cfg.scanMode}): `)).trim().toLowerCase();
     if (SCAN_MODES.has(depth as ScanMode)) cfg.scanMode = depth as ScanMode;
 
-    const framework = (await ask(rl, "Framework [owasp-top10/pci-dss-lite/iso27001-lite/nist-csf-lite] (owasp-top10): ")).trim();
+    const framework = (await ask(rl, `Framework [owasp-top10/pci-dss-lite/iso27001-lite/nist-csf-lite] (${cfg.framework}): `)).trim();
     if (framework) cfg.framework = normalizeFramework(framework);
 
-    const shell = await ask(rl, "Enable scanners/shell? [y/N]: ");
-    cfg.allowShell = yes(shell);
+    const shell = await ask(rl, `Enable scanners/shell? [${cfg.allowShell ? "Y/n" : "y/N"}]: `);
+    if (shell.trim()) cfg.allowShell = yes(shell);
 
-    const stream = await ask(rl, "Stream live model status? [Y/n]: ");
-    cfg.streamModel = !/^(n|no)$/i.test(stream.trim());
-
-    if (cfg.targets.length && cfg.scopeNote) {
-      const authorized = await ask(rl, "Confirm written authorization for this scope now? [y/N]: ");
-      cfg.authorized = yes(authorized);
-    }
+    const authorized = await ask(
+      rl,
+      `Confirm you have written authorization to test ${target} within this scope? [y/N]: `,
+    );
+    cfg.authorized = yes(authorized);
 
     await save();
-    console.log(colors.dim("setup saved. Use /status to review, /run to start."));
+    printStatus();
+    if (!cfg.authorized) {
+      console.log(`${status("WARN")} ${colors.muted("assessment not started because authorization was not confirmed.")}`);
+      return;
+    }
+
+    const start = await ask(rl, "Start assessment now? [Y/n]: ");
+    if (!/^(n|no)$/i.test(start.trim())) {
+      await doRun();
+    } else {
+      console.log(colors.dim("assessment saved and ready; use /run when needed."));
+    }
   };
 
   const handle = async (line: string, rl: readline.Interface): Promise<boolean> => {
@@ -442,6 +601,9 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
         break;
       case "/wizard":
         await runWizard(rl);
+        break;
+      case "/profile":
+        await handleProfile(rest, rl);
         break;
       case "/status":
         printStatus();
@@ -526,9 +688,13 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
         console.log(colors.dim(`stream model status: ${cfg.streamModel ? "on" : "off"}`));
         break;
       case "/authorize":
-        cfg.authorized = true;
-        await save();
-        console.log(`${status("PASS")} ${colors.muted("authorization confirmed - you assert written permission to test the declared scope.")}`);
+        if (!cfg.targets.length || !cfg.scopeNote) {
+          console.log(`${status("WARN")} ${colors.muted("set at least one target and a scope / RoE note before authorization.")}`);
+        } else {
+          cfg.authorized = true;
+          await save();
+          console.log(`${status("PASS")} ${colors.muted("authorization confirmed - you assert written permission to test the declared scope.")}`);
+        }
         break;
       case "/deauthorize":
         cfg.authorized = false;
@@ -573,11 +739,18 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
   };
 
   console.log(renderBanner());
-  console.log(`\n${accent("interactive session")} ${colors.dim("- type")} ${accent("/help")} ${colors.dim("for commands,")} ${accent("/wizard")} ${colors.dim("for setup,")} ${accent("/run")} ${colors.dim("to start")}`);
+  const update = await updateCheck;
+  if (update) {
+    console.log(
+      `\n${status("INFO")} ${colors.fg(`Null AI CLI ${update.latest} is available`)} ${colors.dim(`(installed ${update.current})`)}`,
+    );
+    console.log(`  ${colors.dim("Update with")} ${accent("npm install -g @nullsquare/null-cli@latest")}`);
+  }
+  console.log(`\n${accent("guided session")} ${colors.dim("- the wizard configures the model, scope, and assessment, then starts it")}`);
   if (loaded) {
     console.log(colors.dim(`resumed session - ${cfg.targets.length} target(s) - ${cfg.workflow}/${cfg.scanMode} - ${cfg.framework}`));
   } else {
-    console.log(colors.dim("new session - use /wizard or add a target with /target <url>"));
+    console.log(colors.dim("new session - the guided assessment will start now"));
   }
 
   const rl = readline.createInterface({
@@ -586,15 +759,33 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
     terminal: Boolean(process.stdin.isTTY),
     completer,
   });
+  if (process.stdin.isTTY) readline.emitKeypressEvents(process.stdin, rl);
 
-  if (!loaded && process.stdin.isTTY && process.stdout.isTTY) {
-    const startWizard = await ask(rl, "Run setup wizard now? [Y/n]: ");
-    if (!/^(n|no)$/i.test(startWizard.trim())) await runWizard(rl);
+  let commandInputActive = false;
+  let slashPaletteShown = false;
+  const onKeypress = (): void => {
+    if (!commandInputActive || slashPaletteShown) return;
+    setImmediate(() => {
+      if (!commandInputActive || slashPaletteShown || rl.line !== "/") return;
+      slashPaletteShown = true;
+      console.log(
+        `\n  ${accent("/wizard")}  ${accent("/profile")}  ${accent("/status")}  ${accent("/run")}  ${accent("/findings")}  ${accent("/report")}  ${accent("/help")}`,
+      );
+      console.log(colors.dim("  Keep typing or press Tab to complete a command."));
+      rl.prompt(true);
+    });
+  };
+  if (process.stdin.isTTY && process.stdout.isTTY) process.stdin.on("keypress", onKeypress);
+
+  if (process.stdin.isTTY && process.stdout.isTTY) {
+    await runWizard(rl);
   }
 
   rl.setPrompt(`\n${accent("null-ai")} ${colors.dim(">")} `);
+  commandInputActive = true;
   rl.prompt();
   for await (const raw of rl) {
+    commandInputActive = false;
     const line = raw.trim();
     if (line) {
       try {
@@ -604,8 +795,11 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
         console.log(`${status("FAIL")} ${error instanceof Error ? error.message : String(error)}`);
       }
     }
+    commandInputActive = true;
+    slashPaletteShown = false;
     rl.prompt();
   }
+  process.stdin.off("keypress", onKeypress);
   rl.close();
   await save();
   console.log(`\n${colors.dim("session saved ->")} ${accent(path.resolve(sessionFile(workspaceDir)))}`);

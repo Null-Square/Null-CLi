@@ -1,6 +1,6 @@
 {
   "name": "@nullsquare/null-cli",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "NullSquare-branded open-source AI pentest and compliance readiness framework CLI.",
   "license": "Apache-2.0",
   "type": "module",

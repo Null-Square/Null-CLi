@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import { runPublicAgent } from "../agent/loop.js";
 import { mapFindingsToCompliance, normalizeFramework } from "../compliance/map.js";
+import { loadModelProfile } from "../config/profiles.js";
 import type { AssessmentState, Finding } from "../findings/types.js";
 import { createAssessmentState } from "../findings/types.js";
 import { renderMarkdownReport } from "../reports/markdown.js";
@@ -127,6 +128,7 @@ const usage = (version: string): string => [
   `  ${colorCommand("null-ai skills show")} <slug> [--root <path>]`,
   "",
   section("Model env"),
+  "  Active model profile (configured in the interactive wizard)",
   "  NULL_AI_API_KEY or OPENAI_API_KEY",
   "  NULL_AI_BASE_URL or OPENAI_BASE_URL",
   "  NULL_AI_MODEL or OPENAI_MODEL",
@@ -161,7 +163,22 @@ const commandAgentRun = async (parsed: ParsedArgs): Promise<void> => {
   const goal = flagString(flags, "goal", defaultGoalForWorkflow(workflow as WorkflowMode))!;
   const baseOut = flagString(flags, "out", ".null/run")!;
   const framework = flagString(flags, "framework", "owasp-top10")!;
-  const apiKey = flagString(flags, "api-key") ?? process.env.NULL_AI_API_KEY ?? process.env.OPENAI_API_KEY;
+  const profile = await loadModelProfile().catch(() => null);
+  const apiKey =
+    flagString(flags, "api-key") ??
+    process.env.NULL_AI_API_KEY ??
+    process.env.OPENAI_API_KEY ??
+    profile?.apiKey;
+  const model =
+    flagString(flags, "model") ??
+    process.env.NULL_AI_MODEL ??
+    process.env.OPENAI_MODEL ??
+    profile?.model;
+  const baseUrl =
+    flagString(flags, "base-url") ??
+    process.env.NULL_AI_BASE_URL ??
+    process.env.OPENAI_BASE_URL ??
+    profile?.baseUrl;
   const dryRun = flags["dry-run"] === true || !apiKey;
 
   const scanMode = (flagString(flags, "scan-mode") ?? flagString(flags, "depth", "standard") ?? "standard").toLowerCase();
@@ -188,8 +205,8 @@ const commandAgentRun = async (parsed: ParsedArgs): Promise<void> => {
         target,
         goal,
         workspaceDir,
-        model: flagString(flags, "model"),
-        baseUrl: flagString(flags, "base-url"),
+        model,
+        baseUrl,
         apiKey,
         maxSteps: parsed.all["max-steps"] ? flagNumber(flags, "max-steps", 8) : undefined,
         allowShell: flags["allow-shell"] === true,

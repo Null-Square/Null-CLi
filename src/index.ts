@@ -4,6 +4,8 @@ export * from "./findings/types.js";
 export * from "./reports/markdown.js";
 export * from "./reports/sarif.js";
 export * from "./runtime/workspace.js";
+export * from "./config/profiles.js";
+export * from "./cli/update.js";
 export * from "./scanners/parsers.js";
 export * from "./security/cvss.js";
 export * from "./security/cweOwasp.js";

@@ -4,8 +4,17 @@ All binaries (`null-ai`, `null`, `nullsquare`) are identical. Run `null-ai --hel
 
 ## `interactive` (or bare `null-ai`)
 
-Open a guided, persistent session. Running `null-ai` with no arguments on a terminal
-launches this automatically (piped/non-TTY invocation prints the static home screen instead).
+Open a guided, persistent assessment. Running `null-ai` with no arguments on a
+terminal launches the wizard automatically (piped/non-TTY invocation prints the
+static home screen instead). The wizard:
+
+1. Creates or selects a reusable model profile.
+2. Collects workflow, goal, target, scope, depth, framework, and scanner policy.
+3. Requires explicit authorization for the declared scope.
+4. Shows the final configuration and starts the assessment by default.
+
+Typing `/` at the session prompt displays the primary command palette. Continue
+typing or press `Tab` to complete matching slash commands.
 
 ```bash
 null-ai                      # or: null-ai interactive
@@ -16,7 +25,8 @@ Session commands:
 
 | Command | Purpose |
 |---------|---------|
-| `/wizard` | Guided setup for workflow, target, scope, depth, framework, and scanner policy |
+| `/wizard` | Guided model setup, assessment configuration, authorization, and run |
+| `/profile setup\|list\|use <name>\|delete <name>` | Manage saved model profiles |
 | `/workflow pentest\|compliance` | Choose workflow mode |
 | `/mode pentest\|compliance` | Alias for workflow mode; `/mode quick\|standard\|deep` remains a depth alias |
 | `/depth quick\|standard\|deep` | Set scan depth |
@@ -26,8 +36,8 @@ Session commands:
 | `/shell on\|off` | Allow scanner/shell execution (in-scope assets only) |
 | `/stream on\|off` | Stream model progress into the live status line |
 | `/authorize` / `/deauthorize` | Confirm or clear authorization; required before any live or scanner run |
-| `/env model\|key\|base <v>` | Set model / API key / base URL (the key stays in memory, never saved) |
-| `/run` | Start the assessment with live output |
+| `/env model\|key\|base <v>` | Set temporary process-only overrides |
+| `/run` | Optional manual repeat/start command; the wizard can run directly |
 | `/findings` / `/report` / `/compliance` | Review results (persisted in the workspace) |
 | `/open report\|sarif\|folder` | Open generated output locally |
 | `/status` / `/help` / `/clear` / `/exit` | Session control (config is saved to `<out>/session.json`) |
@@ -52,9 +62,9 @@ null-ai agent run --target <url|host|path> [options]
 | `--dry-run` | off | Build assessment structure without calling a model. |
 | `--stream` | off | Stream model progress into the live status line. |
 | `--max-steps <n>` | per scan-mode | Override the agent step budget. |
-| `--model <id>` | env | Model id (else `NULL_AI_MODEL` / `OPENAI_MODEL`). |
-| `--api-key <key>` | env | API key (else `NULL_AI_API_KEY` / `OPENAI_API_KEY`). |
-| `--base-url <url>` | env | OpenAI-compatible base URL. |
+| `--model <id>` | env/profile | Model id; flags override environment variables, which override the active profile. |
+| `--api-key <key>` | env/profile | API key; flags override environment variables, which override the active profile. |
+| `--base-url <url>` | env/profile | OpenAI-compatible base URL; flags override environment variables, which override the active profile. |
 
 If no API key is available, the run automatically falls back to **dry-run** mode.
 
@@ -119,4 +129,20 @@ null-ai skills show scan-mode-deep
 | `NULL_AI_API_KEY` / `OPENAI_API_KEY` | Model API key |
 | `NULL_AI_BASE_URL` / `OPENAI_BASE_URL` | OpenAI-compatible base URL |
 | `NULL_AI_MODEL` / `OPENAI_MODEL` | Model id |
+| `NULL_AI_HOME` | Override the model profile and credential directory |
+| `NULL_AI_DISABLE_UPDATE_CHECK` | Set to `1` to disable the cached npm update check |
 | `NO_COLOR=1` | Disable colored output |
+
+## Model profiles
+
+The interactive wizard stores the profile name, model, and base URL in the
+user-level Null AI configuration directory. API-key input is hidden in an
+interactive terminal, and keys are encrypted with
+AES-256-GCM using a random local master key stored separately with user-only
+file permissions where the operating system supports them. This protects
+against accidental plaintext disclosure in reports, sessions, logs, and source
+control; it is not a replacement for an operating-system or enterprise secrets
+manager on a compromised account.
+
+The active profile is also used by `null-ai agent run` when command flags and
+environment variables do not provide model settings.

@@ -62,56 +62,67 @@ Binaries after install: `null-ai`, `null-cli`, `null`, `nullsquare` (all identic
 ## Quick Start
 
 ```bash
-# 1. Offline dry-run: builds the assessment structure, no model call, no key needed
+# Open the guided assessment
+null-ai
+```
+
+The wizard creates a reusable model profile, collects workflow, goal, target,
+scope, scan depth, and authorization, then offers to start the assessment
+immediately. The API key is encrypted in a local user vault and is never written
+to the assessment session.
+
+For automation or offline planning:
+
+```bash
 null-ai agent run --target https://example.com --dry-run --out .null/example
-
-# 2. Live assessment: set an OpenAI-compatible key first
-export NULL_AI_API_KEY="your-api-key"
-export NULL_AI_MODEL="gpt-4.1-mini"
-
-null-ai agent run \
-  --target https://example.com \
-  --workflow compliance \
-  --goal "Scoped web assessment with compliance-readiness mapping" \
-  --scan-mode deep \
-  --framework pci-dss-lite \
-  --out .null/example
 ```
 
 > **Only test systems you own or are explicitly authorized to test.** Scanner and shell execution are **off by default**; enable them with `--allow-shell` only for in-scope assets.
 
 ## Interactive Mode
 
-Run `null-ai` with no arguments to open a **guided, persistent session**: choose
-`pentest` or `compliance` workflow, declare target scope and rules of engagement,
-run assessments, and review findings without re-typing flags:
+Run `null-ai` with no arguments to open the primary **guided, persistent
+assessment**. On first launch it requires a model profile and API key. On later
+launches it reuses the active profile and pre-fills the previous assessment:
 
 ```text
 null-ai
 
-null-ai > /workflow compliance
-null-ai > /target https://app.example
-null-ai > /scope Authorized web app test - prod DB out of scope
-null-ai > /depth deep
-null-ai > /framework pci-dss-lite
-null-ai > /authorize          # confirm you are permitted to test the scope
-null-ai > /run                # live assessment with real-time output
-null-ai > /findings           # review results (persisted for later)
+Model profile
+Profile name (default):
+Model id (gpt-4.1-mini):
+OpenAI-compatible base URL (https://api.openai.com/v1):
+API key (input hidden; saved in the encrypted local vault):
+
+Assessment
+Workflow [pentest/compliance] (pentest):
+Goal (...):
+Target URL/host/path (required):
+Scope / rules of engagement (required):
+Confirm you have written authorization ...? [y/N]:
+Start assessment now? [Y/n]:
 ```
+
+At the command prompt, type `/` to reveal the primary commands and press `Tab`
+to complete or filter them. The CLI checks npm periodically and displays a
+one-line upgrade command when a newer published version is available.
 
 | Command | Purpose |
 |---------|---------|
-| `/wizard` | First-run guided setup |
+| `/wizard` | Run the guided setup-to-assessment flow |
+| `/profile setup\|list\|use\|delete` | Manage saved model profiles |
 | `/workflow pentest\|compliance` | Choose assessment workflow |
 | `/depth quick\|standard\|deep` | Choose scan depth |
 | `/target <t>` / `/targets [clear]` | Manage scope (repeatable) |
 | `/scope <text>` / `/authorize` | Declare rules of engagement and confirm authorization |
 | `/framework` / `/shell on\|off` / `/stream on\|off` | Configure the run |
-| `/env model\|key\|base <v>` | Set model / API key (key stays in memory, never written to disk) |
+| `/env model\|key\|base <v>` | Temporary per-process model overrides |
 | `/run` / `/findings` / `/report` / `/compliance` / `/open report` | Run and review |
 | `/status` / `/help` / `/exit` | Session control (config is saved between sessions) |
 
-A live/scanner run is **gated behind `/authorize`**, and the session file never stores your API key.
+A live/scanner run is **gated behind authorization**. Profile metadata and
+encrypted credentials are stored under `~/.null-ai` (or `%USERPROFILE%\.null-ai`
+on Windows); `session.json` never stores the API key.
 
 ## Key Capabilities
 

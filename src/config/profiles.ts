@@ -5,6 +5,7 @@ import path from "node:path";
 
 export interface ModelProfile {
   name: string;
+  provider?: string;
   model: string;
   baseUrl?: string;
   updatedAt: string;
@@ -121,7 +122,7 @@ export const loadModelProfile = async (name?: string): Promise<ResolvedModelProf
 };
 
 export const saveModelProfile = async (
-  input: { name: string; model: string; baseUrl?: string; apiKey?: string },
+  input: { name: string; provider?: string; model: string; baseUrl?: string; apiKey?: string | null },
 ): Promise<ResolvedModelProfile> => {
   const name = input.name.trim();
   const model = input.model.trim();
@@ -131,6 +132,7 @@ export const saveModelProfile = async (
   const profiles = await readJsonOr(profileStorePath(), emptyProfiles());
   const profile: ModelProfile = {
     name,
+    provider: input.provider,
     model,
     baseUrl: input.baseUrl?.trim() || undefined,
     updatedAt: new Date().toISOString(),
@@ -141,9 +143,10 @@ export const saveModelProfile = async (
   profiles.activeProfile = name;
   await writePrivateFile(profileStorePath(), `${JSON.stringify(profiles, null, 2)}\n`);
 
-  if (input.apiKey) {
+  if (input.apiKey !== undefined) {
     const credentials = await readJsonOr(credentialStorePath(), emptyCredentials());
-    credentials.entries[name] = await encrypt(input.apiKey);
+    if (input.apiKey) credentials.entries[name] = await encrypt(input.apiKey);
+    else delete credentials.entries[name];
     await writePrivateFile(credentialStorePath(), `${JSON.stringify(credentials, null, 2)}\n`);
   }
 

@@ -82,30 +82,49 @@ null-ai agent run --target https://example.com --dry-run --out .null/example
 ## Interactive Mode
 
 Run `null-ai` with no arguments to open the primary **guided, persistent
-assessment**. On first launch it requires a model profile and API key. On later
-launches it reuses the active profile and pre-fills the previous assessment:
+assessment**.
+
+On the first launch only, Null AI creates a model profile:
 
 ```text
 null-ai
 
-Model profile
-Profile name (default):
-Model id (gpt-4.1-mini):
-OpenAI-compatible base URL (https://api.openai.com/v1):
-API key (input hidden; saved in the encrypted local vault):
-
-Assessment
-Workflow [pentest/compliance] (pentest):
-Goal (...):
-Target URL/host/path (required):
-Scope / rules of engagement (required):
-Confirm you have written authorization ...? [y/N]:
-Start assessment now? [Y/n]:
+First-time model setup
+? Provider                 OpenAI / OpenRouter / Groq / Ollama / Custom
+? Profile name             default
+? API base URL             https://api.openai.com/v1
+? API key                  ********
+  42 models discovered
+? Model family             GPT-5
+? Model                    gpt-5-mini
 ```
 
-At the command prompt, type `/` to reveal the primary commands and press `Tab`
-to complete or filter them. The CLI checks npm periodically and displays a
-one-line upgrade command when a newer published version is available.
+The API key prompt remains visible while input is masked. The key is encrypted
+in the local credential vault. Available models are discovered from the
+provider; family and searchable model selectors replace manual model typing.
+Change profiles later with `/profile`.
+
+Every launch then opens a separate run wizard:
+
+```text
+New assessment
+? Workflow                 Pentest
+? Target(s)                https://app.example
+? Assessment goal          Test the authorized staging application
+
+Scope & authorization
+? In-scope surfaces        Staging web application and API
+? Out-of-scope exclusions  Production, DoS, and third-party systems
+? Authorization reference SEC-2041 / application owner
+? Authorized test window   Current engagement window
+? Request-rate limit       Maximum 2 requests/second
+? Confirm authorization    Yes
+? Start assessment now?    Yes
+```
+
+After setup or a run, the searchable command launcher supports `/` filtering,
+arrow-key navigation, descriptions, and Enter selection. The CLI also checks npm
+periodically and displays a one-line upgrade command when a newer version exists.
 
 | Command | Purpose |
 |---------|---------|
@@ -126,7 +145,7 @@ on Windows); `session.json` never stores the API key.
 
 ## Key Capabilities
 
-- **Guided interactive session** - persistent REPL with setup wizard, tab completion, workflow modes, and report opening.
+- **Guided interactive session** - one-time model onboarding, per-run scope wizard, searchable commands, and report opening.
 - **Scoped single-agent loop** - one safe action per turn, hard scope boundaries, evidence-first reporting.
 - **Scan modes** - `--scan-mode quick | standard | deep` trade speed for coverage.
 - **Multi-target** - repeat `--target` to assess several assets in one command.

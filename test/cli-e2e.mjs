@@ -12,7 +12,7 @@ process.env.NULL_AI_DISABLE_UPDATE_CHECK = "1";
 
 const help = execFileSync(process.execPath, [cli, "--help"], { encoding: "utf8" });
 assert.match(help, /Null AI CLI/);
-assert.match(help, /Version: 0\.2\.0/);
+assert.match(help, /Version: 0\.2\.1/);
 
 const tempCwd = fs.mkdtempSync(path.join(os.tmpdir(), "null-cli-"));
 try {

@@ -24,6 +24,7 @@ test("model profiles persist metadata and encrypt API keys outside session state
   try {
     await saveModelProfile({
       name: "primary",
+      provider: "openai",
       model: "test-model",
       baseUrl: "https://models.example/v1",
       apiKey: secret,
@@ -41,7 +42,17 @@ test("model profiles persist metadata and encrypt API keys outside session state
 
     const selected = await activateModelProfile("primary");
     assert.equal(selected.model, "test-model");
+    assert.equal(selected.provider, "openai");
     assert.equal(selected.apiKey, secret);
+
+    await saveModelProfile({
+      name: "primary",
+      provider: "ollama",
+      model: "local-model",
+      baseUrl: "http://localhost:11434/v1",
+      apiKey: null,
+    });
+    assert.equal((await loadModelProfile("primary"))?.apiKey, undefined);
 
     const profileJson = await fs.readFile(profileStorePath(), "utf8");
     const credentialJson = await fs.readFile(credentialStorePath(), "utf8");

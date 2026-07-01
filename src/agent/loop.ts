@@ -27,6 +27,7 @@ export const defaultStepsForMode = (mode: ScanMode): number =>
 export interface AgentRunOptions {
   target: string;
   goal: string;
+  scope?: string;
   workspaceDir: string;
   model?: string;
   baseUrl?: string;
@@ -121,6 +122,7 @@ export const runPublicAgent = async (options: AgentRunOptions): Promise<Assessme
         `Target: ${options.target}`,
         `Workflow: ${options.workflow ?? "pentest"}`,
         `Goal: ${options.goal}`,
+        options.scope ? `Authorized scope / rules of engagement: ${options.scope}` : "",
         `Workspace: ${workspaceDir}`,
         `Scan mode: ${scanMode}`,
         `Shell/scanner tools enabled: ${options.allowShell === true ? "yes" : "no"}`,

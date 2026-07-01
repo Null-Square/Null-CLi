@@ -4,6 +4,13 @@ import path from "node:path";
 import readline from "node:readline";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import {
+  confirm as promptConfirm,
+  input as promptInput,
+  password as promptPassword,
+  search as promptSearch,
+  select as promptSelect,
+} from "@inquirer/prompts";
 
 import { runPublicAgent, type ScanMode, type WorkflowMode } from "../agent/loop.js";
 import { mapFindingsToCompliance, normalizeFramework, type ComplianceFramework } from "../compliance/map.js";
@@ -15,6 +22,14 @@ import {
   saveModelProfile,
   type ResolvedModelProfile,
 } from "../config/profiles.js";
+import {
+  MODEL_PROVIDERS,
+  discoverModels,
+  modelFamilies,
+  modelProvider,
+  modelsForFamily,
+  type ModelProviderId,
+} from "../config/modelCatalog.js";
 import type { Finding } from "../findings/types.js";
 import { ensureWorkspace, readJson, writeJson } from "../runtime/workspace.js";
 import { loadSkillBySlug } from "../skills/loader.js";
@@ -42,11 +57,20 @@ interface SessionConfig {
   allowShell: boolean;
   authorized: boolean;
   scopeNote: string;
+  scope?: ScopeDetails;
   streamModel: boolean;
   profile?: string;
   model?: string;
   baseUrl?: string;
   workspaceDir: string;
+}
+
+interface ScopeDetails {
+  inScope: string;
+  outOfScope: string;
+  authorizationReference: string;
+  testingWindow: string;
+  rateLimit: string;
 }
 
 const SCAN_MODES = new Set<ScanMode>(["quick", "standard", "deep"]);
@@ -150,22 +174,15 @@ const HELP = [
 const ask = (rl: readline.Interface, prompt: string): Promise<string> =>
   new Promise((resolve) => rl.question(prompt, resolve));
 
-const askSecret = async (rl: readline.Interface, prompt: string): Promise<string> => {
-  if (!process.stdin.isTTY || !process.stdout.isTTY) return ask(rl, prompt);
-
-  const terminal = rl as readline.Interface & { _writeToOutput?: (value: string) => void };
-  const original = terminal._writeToOutput;
-  process.stdout.write(prompt);
-  terminal._writeToOutput = () => undefined;
-  try {
-    return await ask(rl, "");
-  } finally {
-    terminal._writeToOutput = original;
-    process.stdout.write("\n");
-  }
-};
-
 const yes = (value: string): boolean => /^(y|yes|true|1)$/i.test(value.trim());
+
+const isInteractiveTerminal = (): boolean => Boolean(process.stdin.isTTY && process.stdout.isTTY);
+
+const required = (label: string) => (value: string): boolean | string =>
+  value.trim().length > 0 || `${label} is required.`;
+
+const isPromptExit = (error: unknown): boolean =>
+  error instanceof Error && (error.name === "ExitPromptError" || error.name === "AbortPromptError");
 
 const typewrite = async (text: string): Promise<void> => {
   if (!process.stdout.isTTY) {
@@ -244,8 +261,13 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
     cfg.model = profileRef.model;
     cfg.baseUrl = profileRef.baseUrl;
   }
+  const runtimeApiKey = (profile: ResolvedModelProfile | null): string | undefined =>
+    process.env.NULL_AI_API_KEY ??
+    process.env.OPENAI_API_KEY ??
+    profile?.apiKey ??
+    (profile?.provider === "ollama" ? "ollama" : undefined);
   const apiKeyRef: { value?: string } = {
-    value: process.env.NULL_AI_API_KEY ?? process.env.OPENAI_API_KEY ?? profileRef?.apiKey,
+    value: runtimeApiKey(profileRef),
   };
 
   const save = async (): Promise<void> => {
@@ -300,8 +322,13 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
     console.log(`  ${colors.dim("goal")}       ${colors.muted(cfg.goal)}`);
     console.log(`  ${colors.dim("framework")}  ${colors.fg(cfg.framework)}    ${colors.dim("stream")} ${on(cfg.streamModel)}`);
     console.log(`  ${colors.dim("scanners")}   ${on(cfg.allowShell)}    ${colors.dim("authorized")} ${cfg.authorized ? accent("yes") : status("WARN")}`);
-    console.log(`  ${colors.dim("scope/RoE")}  ${cfg.scopeNote ? colors.muted(cfg.scopeNote) : colors.dim("(none - /scope <text>)")}`);
-    console.log(`  ${colors.dim("profile")}    ${cfg.profile ? colors.fg(cfg.profile) : colors.dim("(not configured)")}`);
+    console.log(`  ${colors.dim("scope/RoE")}  ${cfg.scope ? colors.muted(cfg.scope.inScope) : cfg.scopeNote ? colors.muted(cfg.scopeNote) : colors.dim("(none - /scope <text>)")}`);
+    if (cfg.scope) {
+      console.log(`  ${colors.dim("excluded")}   ${colors.muted(cfg.scope.outOfScope)}`);
+      console.log(`  ${colors.dim("auth ref")}   ${colors.muted(cfg.scope.authorizationReference)}`);
+      console.log(`  ${colors.dim("window")}     ${colors.muted(cfg.scope.testingWindow)}    ${colors.dim("rate")} ${colors.muted(cfg.scope.rateLimit)}`);
+    }
+    console.log(`  ${colors.dim("profile")}    ${cfg.profile ? colors.fg(cfg.profile) : colors.dim("(not configured)")} ${profileRef?.provider ? colors.dim(`(${profileRef.provider})`) : ""}`);
     console.log(`  ${colors.dim("model")}      ${colors.fg(cfg.model ?? process.env.NULL_AI_MODEL ?? process.env.OPENAI_MODEL ?? "gpt-4.1-mini")}    ${colors.dim("api key")} ${apiKeyRef.value ? accent("ready") : status("WARN")}`);
     console.log(`  ${colors.dim("workspace")}  ${accent(path.resolve(workspaceDir))}`);
   };
@@ -381,6 +408,7 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
         const state = await runPublicAgent({
           target,
           goal: cfg.goal,
+          scope: cfg.scopeNote,
           workspaceDir: runWorkspace,
           apiKey,
           model: cfg.model,
@@ -430,7 +458,7 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
     const keyPrompt = existing?.apiKey
       ? "API key (Enter keeps the saved key): "
       : "API key (required; saved in the encrypted local vault): ";
-    const enteredKey = (await askSecret(rl, keyPrompt)).trim();
+    const enteredKey = (await ask(rl, keyPrompt)).trim();
     const environmentKey = process.env.NULL_AI_API_KEY ?? process.env.OPENAI_API_KEY;
     const apiKey = enteredKey || existing?.apiKey || environmentKey;
     if (!apiKey) {
@@ -438,21 +466,148 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
       return false;
     }
 
-    profileRef = await saveModelProfile({ name, model, baseUrl, apiKey: enteredKey || (existing?.apiKey ? undefined : apiKey) });
+    profileRef = await saveModelProfile({
+      name,
+      provider: existing?.provider ?? "custom",
+      model,
+      baseUrl,
+      apiKey: enteredKey || (existing?.apiKey ? undefined : apiKey),
+    });
     cfg.profile = profileRef.name;
     cfg.model = profileRef.model;
     cfg.baseUrl = profileRef.baseUrl;
-    apiKeyRef.value = process.env.NULL_AI_API_KEY ?? process.env.OPENAI_API_KEY ?? profileRef.apiKey;
+    apiKeyRef.value = runtimeApiKey(profileRef);
     await save();
     console.log(`${status("PASS")} ${colors.muted(`profile "${profileRef.name}" saved; API key encrypted locally.`)}`);
     return true;
   };
 
-  const ensureProfile = async (rl: readline.Interface): Promise<boolean> => {
-    if (profileRef?.apiKey && apiKeyRef.value) {
-      const keep = await ask(rl, `Use model profile "${profileRef.name}" (${profileRef.model})? [Y/n]: `);
-      if (!/^(n|no)$/i.test(keep.trim())) return true;
+  const configureProfileTty = async (): Promise<boolean> => {
+    console.log(section(profileRef ? "Model profile" : "First-time model setup"));
+    const providerId = await promptSelect<ModelProviderId>({
+      message: "Provider",
+      choices: MODEL_PROVIDERS.map((provider) => ({
+        name: provider.label,
+        value: provider.id,
+        description: provider.description,
+      })),
+      default: (profileRef?.provider as ModelProviderId | undefined) ?? "openai",
+      loop: false,
+    });
+    const provider = modelProvider(providerId);
+    const currentName = profileRef?.name ?? cfg.profile ?? "default";
+    const name = await promptInput({
+      message: "Profile name",
+      default: currentName,
+      validate: required("Profile name"),
+    });
+    const existing = await loadModelProfile(name).catch(() => null);
+    const sameProvider = Boolean(
+      existing && (existing.provider === provider.id || (!existing.provider && provider.id === "openai")),
+    );
+    const existingKey = sameProvider ? existing?.apiKey : undefined;
+    const baseUrl = await promptInput({
+      message: "API base URL",
+      default: (sameProvider ? existing?.baseUrl : undefined) ?? provider.baseUrl,
+      validate: (value) => {
+        try {
+          const parsed = new URL(value);
+          return parsed.protocol === "http:" || parsed.protocol === "https:" || "Use an HTTP(S) URL.";
+        } catch {
+          return "Enter a valid API base URL.";
+        }
+      },
+    });
+
+    const environmentKey = process.env.NULL_AI_API_KEY ?? process.env.OPENAI_API_KEY;
+    let enteredKey = "";
+    if (provider.requiresApiKey) {
+      enteredKey = await promptPassword({
+        message: existingKey || environmentKey ? "API key (Enter keeps the available key)" : "API key",
+        mask: "*",
+        validate: (value) =>
+          Boolean(value.trim() || existingKey || environmentKey) || "An API key is required for this provider.",
+      });
     }
+    const apiKey = enteredKey.trim() || existingKey || environmentKey;
+
+    console.log(colors.dim("Checking available models..."));
+    const discovered = await discoverModels(baseUrl, apiKey);
+    const availableModels = [...new Set([...discovered, ...provider.fallbackModels])];
+    if (discovered.length) {
+      console.log(`${status("PASS")} ${colors.dim(`${discovered.length} models discovered`)}`);
+    } else {
+      console.log(`${status("WARN")} ${colors.dim("model discovery unavailable; using known choices and custom entry")}`);
+    }
+
+    let model: string;
+    if (availableModels.length) {
+      const families = modelFamilies(availableModels);
+      const family = await promptSelect<string>({
+        message: "Model family",
+        choices: [
+          { name: "All available models", value: "All models" },
+          ...families.map((item) => ({ name: item, value: item })),
+          { name: "Custom model ID", value: "Custom" },
+        ],
+        loop: false,
+      });
+      if (family === "Custom") {
+        model = await promptInput({ message: "Model ID", validate: required("Model ID") });
+      } else {
+        const familyModels = modelsForFamily(availableModels, family);
+        model = await promptSearch<string>({
+          message: "Model",
+          pageSize: 10,
+          source: (term) => {
+            const query = (term ?? "").toLowerCase();
+            const choices = familyModels
+              .filter((item) => !query || item.toLowerCase().includes(query))
+              .slice(0, 50)
+              .map((item) => ({ name: item, value: item }));
+            if (!query || "custom model id".includes(query)) {
+              choices.push({ name: "Enter a custom model ID", value: "__custom__" });
+            }
+            return choices;
+          },
+        });
+        if (model === "__custom__") {
+          model = await promptInput({ message: "Model ID", validate: required("Model ID") });
+        }
+      }
+    } else {
+      model = await promptInput({
+        message: "Model ID",
+        default: sameProvider ? existing?.model : undefined,
+        validate: required("Model ID"),
+      });
+    }
+
+    profileRef = await saveModelProfile({
+      name,
+      provider: provider.id,
+      model,
+      baseUrl,
+      apiKey: provider.requiresApiKey
+        ? enteredKey.trim() || (existingKey ? undefined : apiKey)
+        : null,
+    });
+    cfg.profile = profileRef.name;
+    cfg.model = profileRef.model;
+    cfg.baseUrl = profileRef.baseUrl;
+    apiKeyRef.value = runtimeApiKey(profileRef);
+    await save();
+    console.log(`${status("PASS")} ${colors.fg(`profile "${profileRef.name}" is ready`)}`);
+    return true;
+  };
+
+  const ensureProfileTty = async (): Promise<boolean> => {
+    if (profileRef?.model && runtimeApiKey(profileRef)) return true;
+    return configureProfileTty();
+  };
+
+  const ensureProfile = async (rl: readline.Interface): Promise<boolean> => {
+    if (profileRef?.model && runtimeApiKey(profileRef)) return true;
     return configureProfile(rl);
   };
 
@@ -466,7 +621,7 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
       }
       for (const profile of profiles) {
         const marker = profile.name === cfg.profile ? accent("*") : " ";
-        console.log(`  ${marker} ${colors.fg(profile.name)} ${colors.dim(profile.model)} ${colors.dim(profile.baseUrl ?? "")}`);
+        console.log(`  ${marker} ${colors.fg(profile.name)} ${colors.dim(profile.provider ?? "custom")} ${colors.dim(profile.model)} ${colors.dim(profile.baseUrl ?? "")}`);
       }
       return;
     }
@@ -479,7 +634,7 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
       cfg.profile = profileRef.name;
       cfg.model = profileRef.model;
       cfg.baseUrl = profileRef.baseUrl;
-      apiKeyRef.value = process.env.NULL_AI_API_KEY ?? process.env.OPENAI_API_KEY ?? profileRef.apiKey;
+      apiKeyRef.value = runtimeApiKey(profileRef);
       await save();
       console.log(`${status("PASS")} ${colors.dim(`using profile "${name}"`)}`);
       return;
@@ -491,7 +646,7 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
         cfg.profile = profileRef?.name;
         cfg.model = profileRef?.model;
         cfg.baseUrl = profileRef?.baseUrl;
-        apiKeyRef.value = process.env.NULL_AI_API_KEY ?? process.env.OPENAI_API_KEY ?? profileRef?.apiKey;
+        apiKeyRef.value = runtimeApiKey(profileRef);
         await save();
       }
       console.log(colors.dim(`profile "${name}" deleted`));
@@ -589,6 +744,279 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
       await doRun();
     } else {
       console.log(colors.dim("assessment saved and ready; use /run when needed."));
+    }
+  };
+
+  const runWizardTty = async (): Promise<void> => {
+    cfg.authorized = false;
+    console.log(section("New assessment"));
+    console.log(`  ${colors.dim("model")} ${colors.fg(`${cfg.profile} / ${cfg.model}`)} ${colors.dim("(change with /profile)")}`);
+
+    const workflow = await promptSelect<WorkflowMode>({
+      message: "Workflow",
+      choices: [
+        { name: "Pentest", value: "pentest", description: "Evidence-backed authorized security testing" },
+        { name: "Compliance readiness", value: "compliance", description: "Security evidence mapped to readiness controls" },
+      ],
+      default: cfg.workflow,
+      loop: false,
+    });
+    const hadDefaultGoal = Object.values(DEFAULT_GOALS).includes(cfg.goal);
+    cfg.workflow = workflow;
+    if (hadDefaultGoal) cfg.goal = DEFAULT_GOALS[workflow];
+
+    const targets = await promptInput({
+      message: "Target(s), comma separated",
+      default: cfg.targets.join(", "),
+      validate: required("At least one target"),
+    });
+    cfg.targets = [...new Set(targets.split(",").map((target) => target.trim()).filter(Boolean))];
+    cfg.goal = await promptInput({
+      message: "Assessment goal",
+      default: cfg.goal,
+      validate: required("Assessment goal"),
+    });
+
+    console.log(section("Scope & authorization"));
+    const previousScope = cfg.scope;
+    cfg.scope = {
+      inScope: await promptInput({
+        message: "In-scope surfaces and paths",
+        default: previousScope?.inScope ?? cfg.targets.join(", "),
+        validate: required("In-scope definition"),
+      }),
+      outOfScope: await promptInput({
+        message: "Out-of-scope exclusions",
+        default: previousScope?.outOfScope ?? "Denial of service, destructive actions, and third-party systems",
+        validate: required("Out-of-scope exclusions"),
+      }),
+      authorizationReference: await promptInput({
+        message: "Authorization reference (ticket, owner, or engagement ID)",
+        default: previousScope?.authorizationReference,
+        validate: required("Authorization reference"),
+      }),
+      testingWindow: await promptInput({
+        message: "Authorized testing window",
+        default: previousScope?.testingWindow ?? "Current engagement window",
+        validate: required("Testing window"),
+      }),
+      rateLimit: await promptInput({
+        message: "Request-rate limit",
+        default: previousScope?.rateLimit ?? "Conservative, maximum 2 requests/second",
+        validate: required("Request-rate limit"),
+      }),
+    };
+    cfg.scopeNote = `In scope: ${cfg.scope.inScope}. Excluded: ${cfg.scope.outOfScope}. Authorization: ${cfg.scope.authorizationReference}. Window: ${cfg.scope.testingWindow}. Rate: ${cfg.scope.rateLimit}.`;
+
+    console.log(section("Run policy"));
+    cfg.scanMode = await promptSelect<ScanMode>({
+      message: "Assessment depth",
+      choices: [
+        { name: "Quick", value: "quick", description: "Fast, conservative coverage" },
+        { name: "Standard", value: "standard", description: "Balanced coverage and runtime" },
+        { name: "Deep", value: "deep", description: "Broader coverage and a larger step budget" },
+      ],
+      default: cfg.scanMode,
+      loop: false,
+    });
+    cfg.framework = await promptSelect<ComplianceFramework>({
+      message: "Readiness mapping",
+      choices: FRAMEWORKS.map((framework) => ({ name: framework, value: framework })),
+      default: cfg.framework,
+      loop: false,
+    });
+    cfg.allowShell = await promptConfirm({
+      message: "Enable local scanners and shell tools for this authorized scope?",
+      default: cfg.allowShell,
+    });
+    cfg.authorized = await promptConfirm({
+      message: "I confirm written authorization for the targets, scope, and testing window above",
+      default: false,
+    });
+
+    await save();
+    printStatus();
+    if (!cfg.authorized) {
+      console.log(`${status("WARN")} ${colors.muted("assessment saved but not started; authorization was not confirmed")}`);
+      return;
+    }
+    if (await promptConfirm({ message: "Start this assessment now?", default: true })) {
+      await doRun();
+    } else {
+      console.log(colors.dim("assessment saved and ready"));
+    }
+  };
+
+  const manageProfilesTty = async (): Promise<void> => {
+    const action = await promptSelect<"setup" | "use" | "delete" | "back">({
+      message: "Model profiles",
+      choices: [
+        { name: "Set up or update a profile", value: "setup" },
+        { name: "Switch active profile", value: "use" },
+        { name: "Delete a profile", value: "delete" },
+        { name: "Back", value: "back" },
+      ],
+      loop: false,
+    });
+    if (action === "back") return;
+    if (action === "setup") {
+      await configureProfileTty();
+      return;
+    }
+
+    const profiles = await listModelProfiles();
+    if (!profiles.length) {
+      console.log(colors.dim("No model profiles configured."));
+      await configureProfileTty();
+      return;
+    }
+    const selected = await promptSelect<string>({
+      message: action === "use" ? "Use profile" : "Delete profile",
+      choices: profiles.map((profile) => ({
+        name: `${profile.name}  ${profile.model}`,
+        value: profile.name,
+        description: profile.baseUrl,
+      })),
+      default: cfg.profile,
+      loop: false,
+    });
+    if (action === "use") {
+      profileRef = await activateModelProfile(selected);
+      cfg.profile = profileRef.name;
+      cfg.model = profileRef.model;
+      cfg.baseUrl = profileRef.baseUrl;
+      apiKeyRef.value = runtimeApiKey(profileRef);
+      await save();
+      console.log(`${status("PASS")} ${colors.dim(`using profile "${selected}"`)}`);
+      return;
+    }
+
+    if (await promptConfirm({ message: `Delete model profile "${selected}"?`, default: false })) {
+      await deleteModelProfile(selected);
+      if (cfg.profile === selected) {
+        profileRef = await loadModelProfile().catch(() => null);
+        cfg.profile = profileRef?.name;
+        cfg.model = profileRef?.model;
+        cfg.baseUrl = profileRef?.baseUrl;
+        apiKeyRef.value = runtimeApiKey(profileRef);
+        await save();
+      }
+      console.log(colors.dim(`profile "${selected}" deleted`));
+    }
+  };
+
+  const commandChoices = [
+    { name: "/wizard", value: "wizard", description: "Configure and start a new assessment" },
+    { name: "/run", value: "run", description: "Run the current authorized assessment" },
+    { name: "/status", value: "status", description: "Review current configuration" },
+    { name: "/findings", value: "findings", description: "List recorded findings" },
+    { name: "/report", value: "report", description: "Show generated report paths" },
+    { name: "/compliance", value: "compliance", description: "Show readiness mapping summary" },
+    { name: "/open", value: "open", description: "Open report, SARIF, or workspace" },
+    { name: "/profile", value: "profile", description: "Manage model providers and credentials" },
+    { name: "/target", value: "target", description: "Replace assessment targets" },
+    { name: "/goal", value: "goal", description: "Edit the assessment goal" },
+    { name: "/scope", value: "scope", description: "Edit full scope and authorization data" },
+    { name: "/depth", value: "depth", description: "Change quick, standard, or deep coverage" },
+    { name: "/framework", value: "framework", description: "Change readiness mapping" },
+    { name: "/shell", value: "shell", description: "Enable or disable scanner tools" },
+    { name: "/authorize", value: "authorize", description: "Confirm the current declared scope" },
+    { name: "/deauthorize", value: "deauthorize", description: "Clear authorization" },
+    { name: "/help", value: "help", description: "Show the complete command reference" },
+    { name: "/exit", value: "exit", description: "Save and leave Null AI" },
+  ] as const;
+
+  const runCommandMenuTty = async (): Promise<void> => {
+    for (;;) {
+      let action: (typeof commandChoices)[number]["value"];
+      try {
+        action = await promptSearch({
+          message: "Null AI command",
+          pageSize: 10,
+          source: (term) => {
+            const query = (term ?? "").replace(/^\//, "").toLowerCase();
+            return commandChoices.filter(
+              (choice) =>
+                !query ||
+                choice.name.slice(1).includes(query) ||
+                choice.description.toLowerCase().includes(query),
+            );
+          },
+        });
+      } catch (error) {
+        if (isPromptExit(error)) return;
+        throw error;
+      }
+
+      try {
+        if (action === "exit") return;
+        if (action === "wizard" || action === "scope") await runWizardTty();
+        else if (action === "run") await doRun();
+        else if (action === "status") printStatus();
+        else if (action === "findings") await printFindings();
+        else if (action === "report") await printReport();
+        else if (action === "compliance") await printCompliance();
+        else if (action === "profile") await manageProfilesTty();
+        else if (action === "target") {
+          const value = await promptInput({
+            message: "Target(s), comma separated",
+            default: cfg.targets.join(", "),
+            validate: required("At least one target"),
+          });
+          cfg.targets = [...new Set(value.split(",").map((target) => target.trim()).filter(Boolean))];
+          invalidateAuthorization("targets changed");
+          await save();
+        } else if (action === "goal") {
+          cfg.goal = await promptInput({ message: "Assessment goal", default: cfg.goal, validate: required("Goal") });
+          await save();
+        } else if (action === "depth") {
+          cfg.scanMode = await promptSelect<ScanMode>({
+            message: "Assessment depth",
+            choices: [...SCAN_MODES].map((mode) => ({ name: mode, value: mode })),
+            default: cfg.scanMode,
+          });
+          await save();
+        } else if (action === "framework") {
+          cfg.framework = await promptSelect<ComplianceFramework>({
+            message: "Readiness mapping",
+            choices: FRAMEWORKS.map((framework) => ({ name: framework, value: framework })),
+            default: cfg.framework,
+          });
+          await save();
+        } else if (action === "shell") {
+          cfg.allowShell = await promptConfirm({ message: "Enable scanners and shell tools?", default: cfg.allowShell });
+          await save();
+        } else if (action === "authorize") {
+          if (!cfg.targets.length || !cfg.scopeNote || !cfg.scope?.authorizationReference) {
+            console.log(`${status("WARN")} ${colors.dim("complete /wizard scope data before authorization")}`);
+          } else {
+            cfg.authorized = await promptConfirm({
+              message: "Confirm written authorization for the currently declared scope",
+              default: false,
+            });
+            await save();
+          }
+        } else if (action === "deauthorize") {
+          cfg.authorized = false;
+          await save();
+          console.log(colors.dim("authorization cleared"));
+        } else if (action === "open") {
+          const kind = await promptSelect<string>({
+            message: "Open",
+            choices: [
+              { name: "Markdown report", value: "report" },
+              { name: "SARIF findings", value: "sarif" },
+              { name: "Workspace folder", value: "folder" },
+            ],
+          });
+          await openTarget(kind);
+        } else if (action === "help") {
+          console.log(HELP);
+        }
+      } catch (error) {
+        if (isPromptExit(error)) continue;
+        console.log(`${status("FAIL")} ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
   };
 
@@ -746,46 +1174,33 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
     );
     console.log(`  ${colors.dim("Update with")} ${accent("npm install -g @nullsquare/null-cli@latest")}`);
   }
-  console.log(`\n${accent("guided session")} ${colors.dim("- the wizard configures the model, scope, and assessment, then starts it")}`);
+  console.log(`\n${accent("guided session")} ${colors.dim("- one-time model setup, then a scoped assessment wizard on every launch")}`);
   if (loaded) {
     console.log(colors.dim(`resumed session - ${cfg.targets.length} target(s) - ${cfg.workflow}/${cfg.scanMode} - ${cfg.framework}`));
   } else {
     console.log(colors.dim("new session - the guided assessment will start now"));
   }
 
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-    terminal: Boolean(process.stdin.isTTY),
-    completer,
-  });
-  if (process.stdin.isTTY) readline.emitKeypressEvents(process.stdin, rl);
-
-  let commandInputActive = false;
-  let slashPaletteShown = false;
-  const onKeypress = (): void => {
-    if (!commandInputActive || slashPaletteShown) return;
-    setImmediate(() => {
-      if (!commandInputActive || slashPaletteShown || rl.line !== "/") return;
-      slashPaletteShown = true;
-      console.log(
-        `\n  ${accent("/wizard")}  ${accent("/profile")}  ${accent("/status")}  ${accent("/run")}  ${accent("/findings")}  ${accent("/report")}  ${accent("/help")}`,
-      );
-      console.log(colors.dim("  Keep typing or press Tab to complete a command."));
-      rl.prompt(true);
-    });
-  };
-  if (process.stdin.isTTY && process.stdout.isTTY) process.stdin.on("keypress", onKeypress);
-
-  if (process.stdin.isTTY && process.stdout.isTTY) {
-    await runWizard(rl);
+  if (isInteractiveTerminal()) {
+    try {
+      if (await ensureProfileTty()) {
+        await runWizardTty();
+        await runCommandMenuTty();
+      }
+    } catch (error) {
+      if (!isPromptExit(error)) throw error;
+    }
+    await save();
+    console.log(`\n${colors.dim("session saved ->")} ${accent(path.resolve(sessionFile(workspaceDir)))}`);
+    return;
   }
 
+  // Preserve the line protocol for pipes, scripts, and deterministic tests.
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: false, completer });
+
   rl.setPrompt(`\n${accent("null-ai")} ${colors.dim(">")} `);
-  commandInputActive = true;
   rl.prompt();
   for await (const raw of rl) {
-    commandInputActive = false;
     const line = raw.trim();
     if (line) {
       try {
@@ -795,11 +1210,8 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
         console.log(`${status("FAIL")} ${error instanceof Error ? error.message : String(error)}`);
       }
     }
-    commandInputActive = true;
-    slashPaletteShown = false;
     rl.prompt();
   }
-  process.stdin.off("keypress", onKeypress);
   rl.close();
   await save();
   console.log(`\n${colors.dim("session saved ->")} ${accent(path.resolve(sessionFile(workspaceDir)))}`);

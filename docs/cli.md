@@ -5,16 +5,21 @@ All binaries (`null-ai`, `null`, `nullsquare`) are identical. Run `null-ai --hel
 ## `interactive` (or bare `null-ai`)
 
 Open a guided, persistent assessment. Running `null-ai` with no arguments on a
-terminal launches the wizard automatically (piped/non-TTY invocation prints the
-static home screen instead). The wizard:
+terminal launches it automatically (piped/non-TTY invocation prints the static
+home screen instead).
 
-1. Creates or selects a reusable model profile.
-2. Collects workflow, goal, target, scope, depth, framework, and scanner policy.
-3. Requires explicit authorization for the declared scope.
-4. Shows the final configuration and starts the assessment by default.
+On first launch, model onboarding selects a provider, securely captures its key,
+discovers available models, and provides model-family and searchable model
+selection. This does not repeat after a valid profile exists; use `/profile` to
+change it.
 
-Typing `/` at the session prompt displays the primary command palette. Continue
-typing or press `Tab` to complete matching slash commands.
+On every launch, the run wizard collects workflow, goal, targets, in-scope
+surfaces, exclusions, authorization reference, testing window, rate limit,
+depth, framework, and scanner policy. It requires explicit authorization before
+offering to start.
+
+The post-run command launcher is searchable. Type `/` or part of a command,
+navigate with arrow keys, and press Enter to select it.
 
 ```bash
 null-ai                      # or: null-ai interactive
@@ -25,7 +30,7 @@ Session commands:
 
 | Command | Purpose |
 |---------|---------|
-| `/wizard` | Guided model setup, assessment configuration, authorization, and run |
+| `/wizard` | Configure scope and start a new assessment |
 | `/profile setup\|list\|use <name>\|delete <name>` | Manage saved model profiles |
 | `/workflow pentest\|compliance` | Choose workflow mode |
 | `/mode pentest\|compliance` | Alias for workflow mode; `/mode quick\|standard\|deep` remains a depth alias |

@@ -1,6 +1,6 @@
 {
   "name": "@nullsquare/null-cli",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "NullSquare-branded open-source AI pentest and compliance readiness framework CLI.",
   "license": "Apache-2.0",
   "type": "module",
@@ -63,7 +63,11 @@
     "node": ">=20"
   },
   "devDependencies": {
+    "@inquirer/testing": "^2.1.53",
     "@types/node": "^20.19.0",
     "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^7.10.1"
   }
 }

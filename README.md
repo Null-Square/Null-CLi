@@ -1,32 +1,24 @@
 <div align="center">
 
-![NullSquare autonomous offensive security testing](docs/assets/nullsquare-cover.svg)
+![NullSquare autonomous offensive security testing](docs/assets/nullsquare-cover.png)
 
 # Null AI CLI
 
-**Open-source AI-assisted pentest & compliance-readiness framework — by [NullSquare](https://nullsquare.net).**
+**Open-source AI pentest and compliance-readiness CLI by [NullSquare](https://nullsquare.net).**
 
 [![CI](https://github.com/Null-Square/Null-CLi/actions/workflows/ci.yml/badge.svg)](https://github.com/Null-Square/Null-CLi/actions/workflows/ci.yml)
-[![GitHub stars](https://img.shields.io/github/stars/Null-Square/Null-CLi?style=flat&logo=github&color=F5D13A)](https://github.com/Null-Square/Null-CLi/stargazers)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D20-339933.svg)](package.json)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6.svg?logo=typescript&logoColor=white)](tsconfig.json)
 [![Docker](https://img.shields.io/badge/runtime-Docker-2496ED.svg)](sandbox/Dockerfile)
 [![SARIF](https://img.shields.io/badge/output-SARIF%202.1.0-6B7280.svg)](src/reports/sarif.ts)
-[![PRs welcome](https://img.shields.io/badge/PRs-welcome-F5D13A.svg)](CONTRIBUTING.md)
 [![NullSquare](https://img.shields.io/badge/NullSquare-nullsquare.net-F5D13A.svg)](https://nullsquare.net)
 
-[![Docs](https://img.shields.io/badge/DOCS-README-4A4A4F.svg)](#quick-start)
-[![Website](https://img.shields.io/badge/WEBSITE-nullsquare.net-F5D13A.svg)](https://nullsquare.net)
-[![CLI](https://img.shields.io/badge/CLI-null--ai-2FB27A.svg)](#quick-start)
-[![OWASP](https://img.shields.io/badge/OWASP-Top%2010%20readiness-F5D13A.svg)](docs/compliance.md)
-[![PCI](https://img.shields.io/badge/PCI-DSS%20lite-4F7FE8.svg)](docs/compliance.md)
-[![ISO](https://img.shields.io/badge/ISO%2027001-lite-4F7FE8.svg)](docs/compliance.md)
-[![NIST](https://img.shields.io/badge/NIST-CSF%20lite-4F7FE8.svg)](docs/compliance.md)
+[Docs](#quick-start) | [Website](https://nullsquare.net) | [CLI](docs/cli.md) | [Compliance](docs/compliance.md)
 
-A scoped terminal agent for authorized testing: run safe reconnaissance, orchestrate common scanners, ingest artifacts, produce evidence-backed findings, and map them to lightweight compliance-readiness controls.
+A scoped terminal agent for authorized testing: safe reconnaissance, scanner orchestration, evidence-backed findings, Markdown/SARIF reports, and lightweight compliance-readiness mapping.
 
-**Framework tags:** AI pentest agent · offensive security testing · scanner orchestration · evidence capture · SARIF · OWASP Top 10 · PCI DSS lite · ISO 27001 lite · NIST CSF lite · Docker sandbox · TypeScript CLI
+**Coverage:** OWASP Top 10 | PCI DSS lite | ISO 27001 lite | NIST CSF lite
 
 ![Null AI CLI running a scoped assessment](docs/assets/null-ai-cli-run.svg)
 

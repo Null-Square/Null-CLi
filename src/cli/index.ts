@@ -26,6 +26,7 @@ import {
   status,
 } from "./brand.js";
 import { createLiveReporter } from "./live.js";
+import { runInteractive } from "./interactive.js";
 import type { ScanMode } from "../agent/loop.js";
 
 interface ParsedArgs {
@@ -94,6 +95,7 @@ const home = (): string => [
   renderBanner(),
   "",
   section("Start"),
+  `  ${colorCommand("null-ai")}                              ${colors.dim("open the guided interactive session")}`,
   `  ${colorCommand("null-ai agent run")} --target https://example.com`,
   `  ${colorCommand("null-ai agent run")} --target https://example.com --dry-run`,
   "",
@@ -108,6 +110,7 @@ const usage = (version: string): string => [
   `  ${colorCommand("null-ai")} <command> [options]`,
   "",
   section("Commands"),
+  `  ${colorCommand("interactive")} ${colors.dim("(or just")} ${colorCommand("null-ai")}${colors.dim(")")}   guided session: set scope/RoE, run, review findings`,
   `  ${colorCommand("agent run")} --target <url|host|path> [--target ...] [--scan-mode quick|standard|deep]`,
   `    ${colors.dim("[--goal <text>] [--framework <id>] [--out .null/run] [--allow-shell] [--dry-run]")}`,
   `  ${colorCommand("null-ai sandbox verify")} [--manifest <path>]`,
@@ -295,7 +298,13 @@ const main = async (): Promise<void> => {
     console.log(usage(await readVersion()));
     return;
   }
+  if (command === "interactive" || command === "chat") {
+    return runInteractive(flagString(parsed.flags, "out"));
+  }
   if (!command) {
+    // Bare invocation on a terminal opens the guided interactive session;
+    // when piped / non-TTY it prints the static home screen for scripts.
+    if (process.stdin.isTTY && process.stdout.isTTY) return runInteractive(flagString(parsed.flags, "out"));
     console.log(home());
     return;
   }

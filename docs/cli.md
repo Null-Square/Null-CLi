@@ -2,6 +2,31 @@
 
 All binaries (`null-ai`, `null`, `nullsquare`) are identical. Run `null-ai --help` for the built-in summary, or `null-ai version` for the version.
 
+## `interactive` (or bare `null-ai`)
+
+Open a guided, persistent session. Running `null-ai` with no arguments on a terminal
+launches this automatically (piped/non-TTY invocation prints the static home screen instead).
+
+```bash
+null-ai                      # or: null-ai interactive
+null-ai interactive --out .null/session
+```
+
+Session commands:
+
+| Command | Purpose |
+|---------|---------|
+| `/target <t>` · `/targets [clear]` | Add / list / clear targets (scope is repeatable) |
+| `/goal <text>` · `/scope <text>` | Set the assessment goal and a rules-of-engagement note |
+| `/mode quick\|standard\|deep` | Set scan depth |
+| `/framework <id>` | Set compliance framework |
+| `/shell on\|off` | Allow scanner/shell execution (in-scope assets only) |
+| `/authorize` | Confirm you are authorized — required before any live or scanner run |
+| `/env model\|key\|base <v>` | Set model / API key / base URL (the key stays in memory, never saved) |
+| `/run` | Start the assessment with live output |
+| `/findings` · `/report` · `/compliance` | Review results (persisted in the workspace) |
+| `/status` · `/help` · `/clear` · `/exit` | Session control (config is saved to `<out>/session.json`) |
+
 ## `agent run`
 
 Run a scoped assessment against one or more targets.

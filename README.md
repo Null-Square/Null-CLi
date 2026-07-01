@@ -79,8 +79,38 @@ null-ai agent run \
 
 > **Only test systems you own or are explicitly authorized to test.** Scanner and shell execution are **off by default**; enable them with `--allow-shell` only for in-scope assets.
 
+## Interactive Mode
+
+Run `null-ai` with no arguments to open a **guided, persistent session** — set up your
+environment, declare target scope and rules of engagement, run assessments, and review
+findings without re-typing flags:
+
+```text
+null-ai
+
+null-ai › /target https://app.example
+null-ai › /scope Authorized web app test — prod DB out of scope
+null-ai › /mode deep
+null-ai › /framework pci-dss-lite
+null-ai › /authorize          # confirm you are permitted to test the scope
+null-ai › /run                # live assessment with real-time output
+null-ai › /findings           # review results (persisted for later)
+```
+
+| Command | Purpose |
+|---------|---------|
+| `/target <t>` · `/targets [clear]` | Manage scope (repeatable) |
+| `/scope <text>` · `/authorize` | Declare rules of engagement and confirm authorization |
+| `/mode` · `/framework` · `/shell on\|off` | Configure the run |
+| `/env model\|key\|base <v>` | Set model / API key (key stays in memory, never written to disk) |
+| `/run` · `/findings` · `/report` · `/compliance` | Run and review |
+| `/status` · `/help` · `/exit` | Session control (config is saved between sessions) |
+
+A live/scanner run is **gated behind `/authorize`**, and the session file never stores your API key.
+
 ## Key Capabilities
 
+- **Guided interactive session** — persistent REPL to set scope/RoE, run, and review findings.
 - **Scoped single-agent loop** — one safe action per turn, hard scope boundaries, evidence-first reporting.
 - **Scan modes** — `--scan-mode quick | standard | deep` trade speed for coverage.
 - **Multi-target** — repeat `--target` to assess several assets in one command.

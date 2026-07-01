@@ -1,0 +1,12 @@
+[
+  { "name": "httpx", "command": "httpx -version 2>&1", "expect": "Current Version|httpx" },
+  { "name": "nuclei", "command": "nuclei -version 2>&1", "expect": "nuclei" },
+  { "name": "katana", "command": "katana -version 2>&1", "expect": "katana|Current version" },
+  { "name": "nmap", "command": "nmap --version", "expect": "Nmap" },
+  { "name": "semgrep", "command": "semgrep --version", "expect": "." },
+  { "name": "trivy", "command": "trivy --version", "expect": "Version" },
+  { "name": "gitleaks", "command": "gitleaks version", "expect": "version|gitleaks" },
+  { "name": "curl", "command": "curl --version", "expect": "curl" },
+  { "name": "jq", "command": "jq --version", "expect": "jq" },
+  { "name": "node", "command": "node --version", "expect": "v" }
+]

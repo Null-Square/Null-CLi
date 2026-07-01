@@ -1,0 +1,1 @@
+{"template-id":"missing-security-headers","info":{"name":"Missing security headers","severity":"low","description":"The response is missing one or more recommended security headers.","classification":{"cwe-id":["CWE-16"]},"remediation":"Add appropriate security headers at the edge or application layer."},"host":"https://example.com","matched-at":"https://example.com"}

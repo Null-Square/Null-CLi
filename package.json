@@ -1,0 +1,69 @@
+{
+  "name": "@nullsquare/null-cli",
+  "version": "0.1.0",
+  "description": "NullSquare-branded open-source AI pentest and compliance readiness framework CLI.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "homepage": "https://nullsquare.net",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Null-Square/Null-CLi.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Null-Square/Null-CLi/issues"
+  },
+  "author": "NullSquare (https://nullsquare.net)",
+  "keywords": [
+    "security",
+    "pentest",
+    "penetration-testing",
+    "appsec",
+    "ai-agent",
+    "compliance",
+    "owasp",
+    "sarif",
+    "nuclei",
+    "semgrep",
+    "trivy",
+    "cli",
+    "nullsquare"
+  ],
+  "bin": {
+    "null": "./dist/cli/index.js",
+    "null-ai": "./dist/cli/index.js",
+    "nullsquare": "./dist/cli/index.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "skills",
+    "sandbox",
+    "docs",
+    "examples",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "start": "node ./dist/cli/index.js",
+    "cli": "node ./dist/cli/index.js",
+    "build": "tsc -p tsconfig.json",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run clean && npm run build && npm run test",
+    "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "test:ci": "npm run test",
+    "test:e2e": "npm run build && node test/cli-e2e.mjs",
+    "test:integration:sandbox:none": "npm run test:e2e",
+    "test:integration:sandbox:docker": "npm run test:e2e",
+    "verify": "npm run test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "typescript": "^5.8.3"
+  }
+}

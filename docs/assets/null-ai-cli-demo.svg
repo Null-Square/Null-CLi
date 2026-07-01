@@ -1,0 +1,51 @@
+<svg width="900" height="660" viewBox="0 0 900 660" fill="none" xmlns="http://www.w3.org/2000/svg" font-family="'Space Mono', 'Roboto Mono', 'SFMono-Regular', Consolas, Menlo, monospace">
+  <!-- NullSquare brand: pure black #000000 + single electric-yellow accent #F5D13A -->
+  <rect width="900" height="660" rx="16" fill="#000000"/>
+  <rect x="1" y="1" width="898" height="658" rx="15" stroke="#242428" stroke-width="1.5"/>
+
+  <!-- window chrome -->
+  <rect x="0" y="0" width="900" height="40" rx="16" fill="#111114"/>
+  <rect x="0" y="24" width="900" height="16" fill="#111114"/>
+  <circle cx="26" cy="20" r="6" fill="#E5484D"/>
+  <circle cx="48" cy="20" r="6" fill="#E8B339"/>
+  <circle cx="70" cy="20" r="6" fill="#2FB27A"/>
+  <text x="450" y="25" fill="#9B9BA3" font-size="13" text-anchor="middle">nullsquare — null-ai</text>
+
+  <!-- prompt -->
+  <text x="28" y="72" font-size="15">
+    <tspan fill="#F5D13A" font-weight="700">$ </tspan><tspan fill="#F5F5F7">null-ai agent run </tspan><tspan fill="#9B9BA3">--target https://app.acme.example --framework pci-dss-lite</tspan>
+  </text>
+
+  <!-- assessment panel -->
+  <rect x="28" y="90" width="844" height="150" rx="8" fill="#050505" stroke="#48484E"/>
+  <rect x="44" y="82" width="222" height="16" fill="#000000"/>
+  <text x="52" y="94" fill="#F5D13A" font-size="12" font-weight="700">NULLSQUARE · ASSESSMENT</text>
+
+  <text x="52" y="124" font-size="15"><tspan fill="#5E5E66">Mode       </tspan><tspan fill="#F5D13A">live assessment</tspan></text>
+  <text x="52" y="150" font-size="15"><tspan fill="#5E5E66">Target     </tspan><tspan fill="#F5F5F7">https://app.acme.example</tspan></text>
+  <text x="52" y="176" font-size="15"><tspan fill="#5E5E66">Goal       </tspan><tspan fill="#9B9BA3">Scoped web assessment + compliance readiness</tspan></text>
+  <text x="52" y="202" font-size="15"><tspan fill="#5E5E66">Framework  </tspan><tspan fill="#F5F5F7">pci-dss-lite</tspan></text>
+  <text x="52" y="228" font-size="15"><tspan fill="#5E5E66">Output     </tspan><tspan fill="#F5D13A">.null/acme</tspan></text>
+
+  <!-- live activity log -->
+  <text x="28" y="272" font-size="15"><tspan fill="#5E5E66">· </tspan><tspan fill="#9B9BA3">browser_action goto https://app.acme.example </tspan><tspan fill="#2FB27A">→ 200</tspan></text>
+  <text x="28" y="298" font-size="15"><tspan fill="#5E5E66">· </tspan><tspan fill="#9B9BA3">http_request GET /login </tspan><tspan fill="#2FB27A">→ 200</tspan><tspan fill="#5E5E66"> (evidence captured)</tspan></text>
+  <text x="28" y="324" font-size="15"><tspan fill="#5E5E66">· </tspan><tspan fill="#9B9BA3">scanner_run nuclei </tspan><tspan fill="#5E5E66">· authorized · </tspan><tspan fill="#9B9BA3">3 matches normalized</tspan></text>
+  <text x="28" y="350" font-size="15"><tspan fill="#5E5E66">· </tspan><tspan fill="#9B9BA3">report_finding </tspan><tspan fill="#F2711C" font-weight="700">HIGH </tspan><tspan fill="#F5F5F7">Missing security headers on /</tspan></text>
+
+  <!-- summary panel -->
+  <rect x="28" y="378" width="844" height="256" rx="8" fill="#050505" stroke="#48484E"/>
+  <rect x="44" y="370" width="192" height="16" fill="#000000"/>
+  <text x="52" y="382" fill="#F5D13A" font-size="12" font-weight="700">NULLSQUARE · SUMMARY</text>
+
+  <text x="52" y="412" font-size="15"><tspan fill="#2FB27A" font-weight="700">PASS </tspan><tspan fill="#F5F5F7">assessment complete</tspan></text>
+  <text x="52" y="440" font-size="15"><tspan fill="#5E5E66">Findings  </tspan><tspan fill="#F5F5F7" font-weight="700">3</tspan><tspan fill="#5E5E66">  (</tspan><tspan fill="#F2711C">1 high</tspan><tspan fill="#5E5E66"> · </tspan><tspan fill="#E8B339">2 medium</tspan><tspan fill="#5E5E66">)</tspan></text>
+
+  <text x="64" y="470" font-size="15"><tspan fill="#F2711C" font-weight="700">HIGH    </tspan><tspan fill="#F5F5F7">Missing HSTS / security headers</tspan></text>
+  <text x="64" y="496" font-size="15"><tspan fill="#E8B339" font-weight="700">MEDIUM  </tspan><tspan fill="#F5F5F7">Verbose server banner disclosure</tspan></text>
+  <text x="64" y="522" font-size="15"><tspan fill="#E8B339" font-weight="700">MEDIUM  </tspan><tspan fill="#F5F5F7">Session cookie without Secure attribute</tspan></text>
+
+  <line x1="52" y1="546" x2="848" y2="546" stroke="#242428"/>
+  <text x="52" y="574" font-size="15"><tspan fill="#5E5E66">Artifacts  </tspan><tspan fill="#F5F5F7">.null/acme/</tspan><tspan fill="#5E5E66">report.md · findings.sarif · pci-readiness.json</tspan></text>
+  <text x="52" y="606" font-size="15"><tspan fill="#5E5E66">Scale this on the managed platform  </tspan><tspan fill="#F5D13A">→  nullsquare.net</tspan></text>
+</svg>

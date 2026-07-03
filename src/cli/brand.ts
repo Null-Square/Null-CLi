@@ -60,6 +60,29 @@ const INNER_WIDTH = 62;
 const clip = (value: string, max: number): string =>
   value.length > max ? `${value.slice(0, Math.max(1, max - 1))}…` : value;
 
+const normalizeText = (value: string | undefined): string =>
+  value?.replace(/\s+/g, " ").trim() ?? "";
+
+const wrapText = (value: string | undefined, width: number): string[] => {
+  const words = normalizeText(value).split(" ").filter(Boolean);
+  if (!words.length) return [];
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    if (!current) {
+      current = word;
+      continue;
+    }
+    if (`${current} ${word}`.length <= width) current = `${current} ${word}`;
+    else {
+      lines.push(current);
+      current = word;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+};
+
 const boxLine = (content: string): string => {
   const pad = Math.max(0, INNER_WIDTH - visibleLength(content));
   return `${truecolor(BRAND.border, "│")} ${content}${" ".repeat(pad)} ${truecolor(BRAND.border, "│")}`;
@@ -151,7 +174,7 @@ export const severityTag = (severity: string): string =>
 export interface RunHeaderInfo {
   target: string;
   goal: string;
-  framework: string;
+  framework?: string;
   workspaceDir: string;
   mode: "live" | "dry-run";
   scanMode?: string;
@@ -167,7 +190,7 @@ export const renderRunHeader = (info: RunHeaderInfo): string => {
     `${colors.dim("Mode")}       ${modeLabel}${info.scanMode ? `${colors.dim(" · ")}${colors.muted(info.scanMode)}` : ""}`,
     `${colors.dim("Target")}     ${colors.fg(clip(info.target, 50))}`,
     `${colors.dim("Goal")}       ${colors.muted(clip(info.goal, 50))}`,
-    `${colors.dim("Framework")}  ${colors.fg(info.framework)}`,
+    ...(info.framework ? [`${colors.dim("Framework")}  ${colors.fg(info.framework)}`] : []),
     `${colors.dim("Output")}     ${accent(clip(info.workspaceDir, 50))}`,
     "",
   ]);
@@ -191,19 +214,63 @@ const severityTally = (findings: FindingLine[]): string => {
     .join(colors.dim(" · "));
 };
 
-export const renderRunSummary = (findings: FindingLine[], workspaceDir: string): string => {
+export const renderRunSummary = (
+  findings: FindingLine[],
+  workspaceDir: string,
+  meta?: {
+    evidence?: number;
+    successfulEvidence?: number;
+    actions?: number;
+    outcome?: "complete" | "dry-run" | "inconclusive" | "failed";
+    summary?: string;
+    reportPath?: string;
+  },
+): string => {
   const tally = severityTally(findings);
+  const outcome = meta?.outcome ?? "complete";
+  const outcomeLabel = outcome === "inconclusive" ? "WARN" : outcome === "failed" ? "FAIL" : "PASS";
+  const outcomeText =
+    outcome === "dry-run"
+      ? "dry-run plan complete"
+      : outcome === "inconclusive"
+        ? "assessment inconclusive"
+        : outcome === "failed"
+          ? "assessment failed"
+          : "assessment complete";
   const lines: string[] = [
     "",
-    `${status("PASS")} ${colors.fg("assessment complete")}`,
+    `${status(outcomeLabel)} ${colors.fg(outcomeText)}`,
     `${colors.dim("Findings")}  ${colors.bold(colors.fg(String(findings.length)))}${tally ? `  ${colors.dim("(")}${tally}${colors.dim(")")}` : ""}`,
+    `${colors.dim("Evidence")}  ${colors.bold(colors.fg(String(meta?.evidence ?? 0)))}    ${colors.dim("Tool actions")}  ${colors.bold(colors.fg(String(meta?.actions ?? 0)))}`,
   ];
+  const summaryLines = wrapText(meta?.summary, 50);
+  if (summaryLines.length) {
+    const visibleSummary = summaryLines.slice(0, 4);
+    lines.push("");
+    lines.push(`${colors.dim("Result")}    ${colors.fg(visibleSummary[0])}`);
+    for (const line of visibleSummary.slice(1)) lines.push(`          ${colors.fg(line)}`);
+    if (summaryLines.length > visibleSummary.length) {
+      lines.push(`          ${colors.dim("... full report saved below")}`);
+    }
+  }
+  if (outcome === "inconclusive") {
+    const successfulEvidence = meta?.successfulEvidence ?? 0;
+    lines.push("");
+    const evidenceMessage =
+      successfulEvidence > 0
+        ? `Successful target evidence: ${successfulEvidence}. Review Agent Activity in the report.`
+        : "Diagnostic evidence saved; no successful target evidence captured.";
+    for (const line of wrapText(evidenceMessage, 52)) {
+      lines.push(colors.dim(`  ${line}`));
+    }
+  }
   for (const finding of findings.slice(0, 6)) {
     lines.push(`  ${severityTag(finding.severity)} ${colors.fg(clip(finding.title, 48))}`);
   }
   if (findings.length > 6) lines.push(colors.dim(`  … +${findings.length - 6} more`));
   lines.push("");
-  lines.push(`${colors.dim("Artifacts")}  ${accent(workspaceDir)}`);
+  lines.push(`${colors.dim("Artifacts")}  ${accent(clip(workspaceDir, 49))}`);
+  if (meta?.reportPath) lines.push(`${colors.dim("Report")}     ${accent(clip(meta.reportPath, 49))}`);
   lines.push(`${colors.dim("Scale this on the managed platform")}  ${accent("→")}  ${accent("nullsquare.net")}`);
   lines.push("");
   return box("NULLSQUARE · SUMMARY", lines);

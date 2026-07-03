@@ -22,6 +22,15 @@ const SCANNER_COMMANDS: Record<ScannerName, (target: string, outputPath: string)
 
 const isScannerName = (value: string): value is ScannerName => value in SCANNER_COMMANDS;
 
+const exists = async (filePath: string): Promise<boolean> => {
+  try {
+    const stat = await fs.stat(filePath);
+    return stat.isFile() && stat.size > 0;
+  } catch {
+    return false;
+  }
+};
+
 export const scannerRunTool: ToolDefinition = {
   name: "scanner_run",
   description: "Run a known scanner with a conservative preset and save the raw artifact.",
@@ -49,20 +58,54 @@ export const scannerRunTool: ToolDefinition = {
     const extension = scanner === "nmap" ? "xml" : "json";
     const outputPath = path.join(outputDir, `${scanner}-${Date.now()}.${extension}`);
     const command = SCANNER_COMMANDS[scanner](target, outputPath);
+    const relativeOutputPath = path.relative(context.state.workspaceDir, outputPath).replace(/\\/g, "/");
 
     if (args.dryRun === true) {
-      return success("scanner command prepared", { scanner, command, outputPath });
+      return success("scanner command prepared", { scanner, command, outputPath: relativeOutputPath });
     }
 
     const result = await runShellCommand(command, { cwd: context.state.workspaceDir, timeoutMs: 120000 });
-    return success("scanner completed", {
+    const diagnosticPath = path.join(outputDir, `${scanner}-diagnostic-${Date.now()}.json`);
+    const relativeDiagnosticPath = path.relative(context.state.workspaceDir, diagnosticPath).replace(/\\/g, "/");
+    const rawExists = await exists(outputPath);
+    await fs.writeFile(
+      diagnosticPath,
+      `${JSON.stringify(
+        {
+          scanner,
+          target,
+          command,
+          exitCode: result.exitCode,
+          timedOut: result.timedOut,
+          rawArtifactPath: rawExists ? relativeOutputPath : null,
+          stdout: result.stdout.slice(0, 4000),
+          stderr: result.stderr.slice(0, 4000),
+          createdAt: new Date().toISOString(),
+        },
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
+
+    const data = {
       scanner,
       command,
       exitCode: result.exitCode,
       timedOut: result.timedOut,
       stdout: result.stdout.slice(0, 4000),
       stderr: result.stderr.slice(0, 4000),
-      artifactPath: path.relative(context.state.workspaceDir, outputPath).replace(/\\/g, "/"),
-    });
+      artifactPath: rawExists ? relativeOutputPath : relativeDiagnosticPath,
+      artifactPaths: rawExists ? [relativeOutputPath, relativeDiagnosticPath] : [relativeDiagnosticPath],
+    };
+
+    if (result.timedOut || result.exitCode !== 0) {
+      return failure(
+        `scanner ${scanner} failed${result.timedOut ? " (timeout)" : ""} with exit code ${result.exitCode ?? "null"}`,
+        data,
+      );
+    }
+
+    return success("scanner completed", data);
   },
 };

@@ -47,12 +47,24 @@ test("model profiles persist metadata and encrypt API keys outside session state
 
     await saveModelProfile({
       name: "primary",
-      provider: "ollama",
+      provider: "deepseek",
       model: "local-model",
-      baseUrl: "http://localhost:11434/v1",
+      baseUrl: "https://api.deepseek.com",
       apiKey: null,
     });
     assert.equal((await loadModelProfile("primary"))?.apiKey, undefined);
+
+    await assert.rejects(
+      () =>
+        saveModelProfile({
+          name: "unsupported",
+          provider: "ollama",
+          model: "local-model",
+          baseUrl: "http://localhost:11434/v1",
+          apiKey: null,
+        }),
+      /Unsupported model provider/,
+    );
 
     const profileJson = await fs.readFile(profileStorePath(), "utf8");
     const credentialJson = await fs.readFile(credentialStorePath(), "utf8");

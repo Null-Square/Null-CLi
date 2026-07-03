@@ -14,6 +14,6 @@ Recommended flow:
 3. Use `http_request` for one or two safe endpoint checks.
 4. Run `scanner_run` only when shell/scanner execution is explicitly enabled.
 5. Report only evidence-backed findings.
-6. Run `map_compliance` before finishing.
+6. If the active workflow is compliance readiness, run `map_compliance` before finishing.
 
 Avoid brute force, credential attacks, destructive payloads, persistence, and out-of-scope host discovery.

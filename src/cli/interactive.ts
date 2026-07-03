@@ -25,12 +25,15 @@ import {
 import {
   MODEL_PROVIDERS,
   discoverModels,
+  environmentApiKeyForProvider,
   modelFamilies,
   modelProvider,
   modelsForFamily,
+  normalizeModelProviderId,
   type ModelProviderId,
 } from "../config/modelCatalog.js";
 import type { Finding } from "../findings/types.js";
+import { summarizeAssessment } from "../reports/markdown.js";
 import { ensureWorkspace, readJson, writeJson } from "../runtime/workspace.js";
 import { loadSkillBySlug } from "../skills/loader.js";
 import {
@@ -76,6 +79,35 @@ interface ScopeDetails {
 const SCAN_MODES = new Set<ScanMode>(["quick", "standard", "deep"]);
 const WORKFLOWS = new Set<WorkflowMode>(["pentest", "compliance"]);
 const FRAMEWORKS: ComplianceFramework[] = ["owasp-top10", "pci-dss-lite", "iso27001-lite", "nist-csf-lite"];
+
+export type HomeAction =
+  | "pentest"
+  | "compliance"
+  | "resume"
+  | "results"
+  | "demo"
+  | "profiles"
+  | "advanced"
+  | "exit";
+
+export const workflowUsesCompliance = (workflow: WorkflowMode): boolean => workflow === "compliance";
+
+export const homeMenuChoices = (hasCurrentAssessment: boolean): Array<{
+  name: string;
+  value: HomeAction;
+  description: string;
+}> => [
+  { name: "New pentest", value: "pentest", description: "Start an authorized evidence-backed security assessment" },
+  { name: "Compliance readiness", value: "compliance", description: "Collect evidence and map it to a selected framework" },
+  ...(hasCurrentAssessment
+    ? [{ name: "Resume saved assessment", value: "resume" as const, description: "Review and run the current saved configuration" }]
+    : []),
+  { name: "Authorized lab demo", value: "demo", description: "Run a focused assessment against your own training lab" },
+  { name: "Results and reports", value: "results", description: "Review findings and open generated artifacts" },
+  { name: "Model settings", value: "profiles", description: "Manage providers, models, and credentials" },
+  { name: "Advanced commands", value: "advanced", description: "Open the searchable slash-command launcher" },
+  { name: "Exit", value: "exit", description: "Save and leave Null AI" },
+];
 
 const DEFAULT_GOALS: Record<WorkflowMode, string> = {
   pentest: "Perform a scoped pentest and produce evidence-backed findings.",
@@ -155,7 +187,7 @@ const HELP = [
   section("Session"),
   `  ${accent("/wizard")}                  configure & run    ${accent("/status")}             show configuration`,
   `  ${accent("/target")} <url|host|path>  add target         ${accent("/targets")} [clear]    list / clear targets`,
-  `  ${accent("/scope")} <text>            scope / RoE note   ${accent("/authorize")}          confirm authorization`,
+  `  ${accent("/scope")} <text>            scope summary     ${accent("/authorize")}          confirm authorization`,
   `  ${accent("/workflow")} pentest|compliance                ${accent("/depth")} quick|standard|deep`,
   `  ${accent("/mode")} pentest|compliance  alias for workflow; /mode quick|standard|deep still sets depth`,
   `  ${accent("/framework")} <id>          set mapping        ${accent("/shell")} on|off       allow scanners/shell`,
@@ -262,10 +294,7 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
     cfg.baseUrl = profileRef.baseUrl;
   }
   const runtimeApiKey = (profile: ResolvedModelProfile | null): string | undefined =>
-    process.env.NULL_AI_API_KEY ??
-    process.env.OPENAI_API_KEY ??
-    profile?.apiKey ??
-    (profile?.provider === "ollama" ? "ollama" : undefined);
+    profile?.apiKey ?? environmentApiKeyForProvider(profile?.provider ?? "openai");
   const apiKeyRef: { value?: string } = {
     value: runtimeApiKey(profileRef),
   };
@@ -293,6 +322,10 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
 
   const reportPaths = (): string[] => runWorkspaces().map((dir) => path.join(dir, "reports", "report.md"));
   const sarifPaths = (): string[] => runWorkspaces().map((dir) => path.join(dir, "findings.sarif"));
+  const successfulEvidenceCount = (state: Awaited<ReturnType<typeof runPublicAgent>>): number =>
+    (state.actions ?? [])
+      .filter((action) => action.ok && action.artifactPaths.length > 0)
+      .reduce((count, action) => count + action.artifactPaths.length, 0);
 
   const loadFindings = async (): Promise<Finding[]> => {
     const findings: Finding[] = [];
@@ -320,7 +353,11 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
     console.log(`  ${colors.dim("workflow")}   ${colors.fg(cfg.workflow)}    ${colors.dim("depth")} ${colors.fg(cfg.scanMode)}`);
     console.log(`  ${colors.dim("targets")}    ${cfg.targets.length ? cfg.targets.map((target) => colors.fg(target)).join(colors.dim(", ")) : colors.dim("(none - /target <url>)")}`);
     console.log(`  ${colors.dim("goal")}       ${colors.muted(cfg.goal)}`);
-    console.log(`  ${colors.dim("framework")}  ${colors.fg(cfg.framework)}    ${colors.dim("stream")} ${on(cfg.streamModel)}`);
+    if (workflowUsesCompliance(cfg.workflow)) {
+      console.log(`  ${colors.dim("framework")}  ${colors.fg(cfg.framework)}    ${colors.dim("stream")} ${on(cfg.streamModel)}`);
+    } else {
+      console.log(`  ${colors.dim("stream")}     ${on(cfg.streamModel)}`);
+    }
     console.log(`  ${colors.dim("scanners")}   ${on(cfg.allowShell)}    ${colors.dim("authorized")} ${cfg.authorized ? accent("yes") : status("WARN")}`);
     console.log(`  ${colors.dim("scope/RoE")}  ${cfg.scope ? colors.muted(cfg.scope.inScope) : cfg.scopeNote ? colors.muted(cfg.scopeNote) : colors.dim("(none - /scope <text>)")}`);
     if (cfg.scope) {
@@ -401,7 +438,7 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
     for (const target of cfg.targets) {
       const runWorkspace = multi ? path.join(workspaceDir, targetSlug(target)) : workspaceDir;
       process.stderr.write(
-        `${renderRunHeader({ target, goal: cfg.goal, framework: cfg.framework, workspaceDir: runWorkspace, mode: "live", scanMode: cfg.scanMode })}\n`,
+        `${renderRunHeader({ target, goal: cfg.goal, ...(workflowUsesCompliance(cfg.workflow) ? { framework: cfg.framework } : {}), workspaceDir: runWorkspace, mode: "live", scanMode: cfg.scanMode })}\n`,
       );
       const reporter = createLiveReporter(target);
       try {
@@ -414,14 +451,23 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
           model: cfg.model,
           baseUrl: cfg.baseUrl,
           allowShell: cfg.allowShell,
-          framework: cfg.framework,
+          ...(workflowUsesCompliance(cfg.workflow) ? { framework: cfg.framework } : {}),
           workflow: cfg.workflow,
           scanMode: cfg.scanMode,
           scanModeGuidance: skill?.content,
           streamModel: cfg.streamModel,
           onEvent: reporter.onEvent,
         });
-        console.log(renderRunSummary(state.findings, path.resolve(runWorkspace)));
+        console.log(
+          renderRunSummary(state.findings, path.resolve(runWorkspace), {
+            evidence: state.evidence.length,
+            successfulEvidence: successfulEvidenceCount(state),
+            actions: state.actions.length,
+            outcome: state.outcome,
+            summary: summarizeAssessment(state),
+            reportPath: path.resolve(runWorkspace, "reports", "report.md"),
+          }),
+        );
       } finally {
         reporter.stop();
       }
@@ -446,21 +492,41 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
 
   const configureProfile = async (rl: readline.Interface): Promise<boolean> => {
     console.log(section("Model profile"));
+    const currentProvider = normalizeModelProviderId(profileRef?.provider) ?? "openai";
+    const providerHint = MODEL_PROVIDERS.map((provider) => provider.id).join("/");
+    const providerInput = (await ask(rl, `Provider [${providerHint}] (${currentProvider}): `)).trim() || currentProvider;
+    const providerId = normalizeModelProviderId(providerInput);
+    if (!providerId) {
+      console.log(`${status("WARN")} ${colors.muted(`unsupported provider "${providerInput}". Supported: ${providerHint}.`)}`);
+      return false;
+    }
+    const provider = modelProvider(providerId);
     const currentName = profileRef?.name ?? cfg.profile ?? "default";
     const name = (await ask(rl, `Profile name (${currentName}): `)).trim() || currentName;
+    const sameProvider = profileRef?.provider === provider.id || (!profileRef?.provider && provider.id === "openai");
     const currentModel =
-      profileRef?.model ?? cfg.model ?? process.env.NULL_AI_MODEL ?? process.env.OPENAI_MODEL ?? "gpt-4.1-mini";
+      (sameProvider ? profileRef?.model ?? cfg.model : undefined) ??
+      provider.fallbackModels[0] ??
+      process.env.NULL_AI_MODEL ??
+      process.env.OPENAI_MODEL ??
+      "gpt-4.1-mini";
     const model = (await ask(rl, `Model id (${currentModel}): `)).trim() || currentModel;
-    const currentBase = profileRef?.baseUrl ?? cfg.baseUrl ?? process.env.NULL_AI_BASE_URL ?? process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1";
+    const currentBase =
+      (sameProvider ? profileRef?.baseUrl ?? cfg.baseUrl : undefined) ??
+      process.env.NULL_AI_BASE_URL ??
+      process.env.OPENAI_BASE_URL ??
+      provider.baseUrl;
     const baseUrl = (await ask(rl, `OpenAI-compatible base URL (${currentBase}): `)).trim() || currentBase;
 
     const existing = await loadModelProfile(name).catch(() => null);
-    const keyPrompt = existing?.apiKey
+    const sameNamedProvider = existing?.provider === provider.id || (!existing?.provider && provider.id === "openai");
+    const preserveExistingKey = sameNamedProvider && Boolean(existing?.apiKey);
+    const keyPrompt = preserveExistingKey
       ? "API key (Enter keeps the saved key): "
       : "API key (required; saved in the encrypted local vault): ";
     const enteredKey = (await ask(rl, keyPrompt)).trim();
-    const environmentKey = process.env.NULL_AI_API_KEY ?? process.env.OPENAI_API_KEY;
-    const apiKey = enteredKey || existing?.apiKey || environmentKey;
+    const environmentKey = environmentApiKeyForProvider(provider.id);
+    const apiKey = enteredKey || (sameNamedProvider ? existing?.apiKey : undefined) || environmentKey;
     if (!apiKey) {
       console.log(`${status("WARN")} ${colors.muted("an API key is required to complete a model profile.")}`);
       return false;
@@ -468,10 +534,10 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
 
     profileRef = await saveModelProfile({
       name,
-      provider: existing?.provider ?? "custom",
+      provider: provider.id,
       model,
       baseUrl,
-      apiKey: enteredKey || (existing?.apiKey ? undefined : apiKey),
+      apiKey: enteredKey || (preserveExistingKey ? undefined : apiKey),
     });
     cfg.profile = profileRef.name;
     cfg.model = profileRef.model;
@@ -491,7 +557,7 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
         value: provider.id,
         description: provider.description,
       })),
-      default: (profileRef?.provider as ModelProviderId | undefined) ?? "openai",
+      default: normalizeModelProviderId(profileRef?.provider) ?? "openai",
       loop: false,
     });
     const provider = modelProvider(providerId);
@@ -506,20 +572,27 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
       existing && (existing.provider === provider.id || (!existing.provider && provider.id === "openai")),
     );
     const existingKey = sameProvider ? existing?.apiKey : undefined;
-    const baseUrl = await promptInput({
-      message: "API base URL",
-      default: (sameProvider ? existing?.baseUrl : undefined) ?? provider.baseUrl,
-      validate: (value) => {
-        try {
-          const parsed = new URL(value);
-          return parsed.protocol === "http:" || parsed.protocol === "https:" || "Use an HTTP(S) URL.";
-        } catch {
-          return "Enter a valid API base URL.";
-        }
-      },
+    const suggestedBaseUrl = (sameProvider ? existing?.baseUrl : undefined) ?? provider.baseUrl;
+    const useCustomEndpoint = await promptConfirm({
+      message: "Use a custom API endpoint?",
+      default: suggestedBaseUrl !== provider.baseUrl,
     });
+    const baseUrl = useCustomEndpoint
+      ? await promptInput({
+          message: "API base URL",
+          default: suggestedBaseUrl,
+          validate: (value) => {
+            try {
+              const parsed = new URL(value);
+              return parsed.protocol === "http:" || parsed.protocol === "https:" || "Use an HTTP(S) URL.";
+            } catch {
+              return "Enter a valid API base URL.";
+            }
+          },
+        })
+      : provider.baseUrl;
 
-    const environmentKey = process.env.NULL_AI_API_KEY ?? process.env.OPENAI_API_KEY;
+    const environmentKey = environmentApiKeyForProvider(provider.id);
     let enteredKey = "";
     if (provider.requiresApiKey) {
       enteredKey = await promptPassword({
@@ -537,7 +610,7 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
     if (discovered.length) {
       console.log(`${status("PASS")} ${colors.dim(`${discovered.length} models discovered`)}`);
     } else {
-      console.log(`${status("WARN")} ${colors.dim("model discovery unavailable; using known choices and custom entry")}`);
+      console.log(`${status("WARN")} ${colors.dim("model discovery could not verify the endpoint; check the key, network, or custom URL if the run later fails")}`);
     }
 
     let model: string;
@@ -621,7 +694,7 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
       }
       for (const profile of profiles) {
         const marker = profile.name === cfg.profile ? accent("*") : " ";
-        console.log(`  ${marker} ${colors.fg(profile.name)} ${colors.dim(profile.provider ?? "custom")} ${colors.dim(profile.model)} ${colors.dim(profile.baseUrl ?? "")}`);
+        console.log(`  ${marker} ${colors.fg(profile.name)} ${colors.dim(profile.provider ?? "openai")} ${colors.dim(profile.model)} ${colors.dim(profile.baseUrl ?? "")}`);
       }
       return;
     }
@@ -681,6 +754,17 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
     console.log(ok ? colors.dim(`opened ${target}`) : `${colors.dim(target)} ${accent(path.resolve(existing[0]))}`);
   };
 
+  const defaultScopeSummary = (): string => {
+    const targets = cfg.targets.length ? cfg.targets.join(", ") : "the declared target(s)";
+    if (cfg.workflow === "compliance") {
+      return `Review authorized security evidence for ${targets}; exclude destructive testing, credential attacks, denial of service, and third-party systems.`;
+    }
+    return `Authorized testing for ${targets}; exclude destructive testing, credential attacks, denial of service, and third-party systems.`;
+  };
+
+  const scopeDetailsToNote = (scope: ScopeDetails): string =>
+    `In scope: ${scope.inScope}. Excluded: ${scope.outOfScope}. Authorization: ${scope.authorizationReference}. Window: ${scope.testingWindow}. Rate: ${scope.rateLimit}.`;
+
   const runWizard = async (rl: readline.Interface): Promise<void> => {
     await typewrite("Null AI guided assessment");
     if (!(await ensureProfile(rl))) {
@@ -696,11 +780,7 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
       if (hadDefaultGoal) cfg.goal = DEFAULT_GOALS[cfg.workflow];
     }
 
-    const goal = (await ask(rl, `Goal (${cfg.goal}): `)).trim();
-    if (goal) cfg.goal = goal;
-
-    const targetDefault = cfg.targets[0] ?? "";
-    const target = (await ask(rl, `Target URL/host/path${targetDefault ? ` (${targetDefault})` : " (required)"}: `)).trim() || targetDefault;
+    const target = (await ask(rl, "Target URL/host/path (required): ")).trim();
     if (!target) {
       console.log(`${status("WARN")} ${colors.muted("a target is required. Wizard paused.")}`);
       await save();
@@ -709,28 +789,43 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
     cfg.targets = [target];
     cfg.authorized = false;
 
-    const scope = (await ask(rl, `Scope / rules of engagement${cfg.scopeNote ? ` (${cfg.scopeNote})` : " (required)"}: `)).trim();
-    if (scope) cfg.scopeNote = scope;
-    if (!cfg.scopeNote) {
-      console.log(`${status("WARN")} ${colors.muted("a scope / rules-of-engagement note is required. Wizard paused.")}`);
-      await save();
-      return;
+    const goal = (await ask(rl, `Goal (${cfg.goal}): `)).trim();
+    if (goal) cfg.goal = goal;
+
+    console.log(section("Scope & authorization"));
+    const scopeSummary = (await ask(rl, `Scope summary (${defaultScopeSummary()}): `)).trim() || defaultScopeSummary();
+    const previousScope = cfg.scope;
+    cfg.scopeNote = scopeSummary;
+    cfg.scope = undefined;
+
+    const advancedScope = yes(await ask(rl, "Add advanced scope details? [y/N]: "));
+    if (advancedScope) {
+      cfg.scope = {
+        inScope: (await ask(rl, `In-scope surfaces and paths (${scopeSummary}): `)).trim() || scopeSummary,
+        outOfScope: (await ask(rl, `Out-of-scope exclusions (${previousScope?.outOfScope ?? "DoS, destructive actions, credential attacks, and third-party systems"}): `)).trim() || previousScope?.outOfScope || "DoS, destructive actions, credential attacks, and third-party systems",
+        authorizationReference: (await ask(rl, `Authorization reference (${previousScope?.authorizationReference ?? "Written authorization confirmed"}): `)).trim() || previousScope?.authorizationReference || "Written authorization confirmed",
+        testingWindow: (await ask(rl, `Authorized testing window (${previousScope?.testingWindow ?? "Current engagement window"}): `)).trim() || previousScope?.testingWindow || "Current engagement window",
+        rateLimit: (await ask(rl, `Request-rate limit (${previousScope?.rateLimit ?? "Conservative manual pace"}): `)).trim() || previousScope?.rateLimit || "Conservative manual pace",
+      };
+      cfg.scopeNote = scopeDetailsToNote(cfg.scope);
     }
 
     const depth = (await ask(rl, `Depth [quick/standard/deep] (${cfg.scanMode}): `)).trim().toLowerCase();
     if (SCAN_MODES.has(depth as ScanMode)) cfg.scanMode = depth as ScanMode;
 
-    const framework = (await ask(rl, `Framework [owasp-top10/pci-dss-lite/iso27001-lite/nist-csf-lite] (${cfg.framework}): `)).trim();
-    if (framework) cfg.framework = normalizeFramework(framework);
+    if (cfg.workflow === "compliance") {
+      const framework = (await ask(rl, `Framework [owasp-top10/pci-dss-lite/iso27001-lite/nist-csf-lite] (${cfg.framework}): `)).trim();
+      if (framework) cfg.framework = normalizeFramework(framework);
+    }
 
     const shell = await ask(rl, `Enable scanners/shell? [${cfg.allowShell ? "Y/n" : "y/N"}]: `);
     if (shell.trim()) cfg.allowShell = yes(shell);
 
     const authorized = await ask(
       rl,
-      `Confirm you have written authorization to test ${target} within this scope? [y/N]: `,
+      `Confirm you have written authorization to test ${target} within this scope? [Y/n]: `,
     );
-    cfg.authorized = yes(authorized);
+    cfg.authorized = !/^(n|no)$/i.test(authorized.trim());
 
     await save();
     printStatus();
@@ -747,52 +842,37 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
     }
   };
 
-  const runWizardTty = async (): Promise<void> => {
-    cfg.authorized = false;
-    console.log(section("New assessment"));
-    console.log(`  ${colors.dim("model")} ${colors.fg(`${cfg.profile} / ${cfg.model}`)} ${colors.dim("(change with /profile)")}`);
-
-    const workflow = await promptSelect<WorkflowMode>({
-      message: "Workflow",
-      choices: [
-        { name: "Pentest", value: "pentest", description: "Evidence-backed authorized security testing" },
-        { name: "Compliance readiness", value: "compliance", description: "Security evidence mapped to readiness controls" },
-      ],
-      default: cfg.workflow,
-      loop: false,
+  const configureScopeTty = async (preferExisting = true, showHeading = true): Promise<void> => {
+    if (showHeading) console.log(section("Scope & authorization"));
+    const scopeSummary = await promptInput({
+      message: "Scope summary",
+      default: preferExisting && cfg.scopeNote ? cfg.scopeNote : defaultScopeSummary(),
+      validate: required("Scope summary"),
     });
-    const hadDefaultGoal = Object.values(DEFAULT_GOALS).includes(cfg.goal);
-    cfg.workflow = workflow;
-    if (hadDefaultGoal) cfg.goal = DEFAULT_GOALS[workflow];
-
-    const targets = await promptInput({
-      message: "Target(s), comma separated",
-      default: cfg.targets.join(", "),
-      validate: required("At least one target"),
-    });
-    cfg.targets = [...new Set(targets.split(",").map((target) => target.trim()).filter(Boolean))];
-    cfg.goal = await promptInput({
-      message: "Assessment goal",
-      default: cfg.goal,
-      validate: required("Assessment goal"),
-    });
-
-    console.log(section("Scope & authorization"));
     const previousScope = cfg.scope;
+    cfg.scopeNote = scopeSummary;
+    cfg.scope = undefined;
+
+    const advancedScope = await promptConfirm({
+      message: "Add advanced scope details?",
+      default: false,
+    });
+    if (!advancedScope) return;
+
     cfg.scope = {
       inScope: await promptInput({
         message: "In-scope surfaces and paths",
-        default: previousScope?.inScope ?? cfg.targets.join(", "),
+        default: previousScope?.inScope ?? scopeSummary,
         validate: required("In-scope definition"),
       }),
       outOfScope: await promptInput({
         message: "Out-of-scope exclusions",
-        default: previousScope?.outOfScope ?? "Denial of service, destructive actions, and third-party systems",
+        default: previousScope?.outOfScope ?? "DoS, destructive actions, credential attacks, and third-party systems",
         validate: required("Out-of-scope exclusions"),
       }),
       authorizationReference: await promptInput({
-        message: "Authorization reference (ticket, owner, or engagement ID)",
-        default: previousScope?.authorizationReference,
+        message: "Authorization reference",
+        default: previousScope?.authorizationReference ?? "Written authorization confirmed",
         validate: required("Authorization reference"),
       }),
       testingWindow: await promptInput({
@@ -802,36 +882,100 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
       }),
       rateLimit: await promptInput({
         message: "Request-rate limit",
-        default: previousScope?.rateLimit ?? "Conservative, maximum 2 requests/second",
+        default: previousScope?.rateLimit ?? "Conservative manual pace",
         validate: required("Request-rate limit"),
       }),
     };
-    cfg.scopeNote = `In scope: ${cfg.scope.inScope}. Excluded: ${cfg.scope.outOfScope}. Authorization: ${cfg.scope.authorizationReference}. Window: ${cfg.scope.testingWindow}. Rate: ${cfg.scope.rateLimit}.`;
+    cfg.scopeNote = scopeDetailsToNote(cfg.scope);
+  };
 
-    console.log(section("Run policy"));
+  const configureDefaultScopeTty = async (): Promise<void> => {
+    cfg.scope = undefined;
+    cfg.scopeNote = defaultScopeSummary();
+    console.log(section("Scope & authorization"));
+    console.log(`  ${colors.dim("default scope")} ${colors.muted(cfg.scopeNote)}`);
+    const customize = await promptConfirm({
+      message: "Customize scope or exclusions?",
+      default: false,
+    });
+    if (customize) await configureScopeTty(false, false);
+  };
+
+  type AssessmentFlow = WorkflowMode | "demo";
+
+  const runWizardTty = async (requestedFlow?: AssessmentFlow): Promise<void> => {
+    cfg.authorized = false;
+    let flow = requestedFlow;
+    if (!flow) {
+      flow = await promptSelect<WorkflowMode>({
+        message: "Assessment type",
+        choices: [
+          { name: "Pentest", value: "pentest", description: "Evidence-backed authorized security testing" },
+          { name: "Compliance readiness", value: "compliance", description: "Security evidence mapped to readiness controls" },
+        ],
+        default: cfg.workflow,
+        loop: false,
+      });
+    }
+
+    const workflow: WorkflowMode = flow === "compliance" ? "compliance" : "pentest";
+    const hadDefaultGoal = Object.values(DEFAULT_GOALS).includes(cfg.goal);
+    cfg.workflow = workflow;
+    if (flow === "demo") {
+      cfg.goal = "Find simple, evidence-backed issues in an authorized training lab.";
+      cfg.scanMode = "quick";
+    } else if (hadDefaultGoal) {
+      cfg.goal = DEFAULT_GOALS[workflow];
+    }
+
+    const title = flow === "demo" ? "Authorized lab demo" : workflow === "compliance" ? "Compliance readiness" : "New pentest";
+    console.log(section(title));
+    console.log(`  ${colors.dim("model")} ${colors.fg(`${cfg.profile} / ${cfg.model}`)} ${colors.dim("(change with /profile)")}`);
+    if (cfg.targets.length) {
+      console.log(`  ${colors.dim("previous target")} ${colors.muted(cfg.targets.join(", "))}`);
+    }
+
+    const targets = await promptInput({
+      message: flow === "demo" ? "Authorized lab URL" : "Target(s), comma separated",
+      validate: required("At least one target"),
+    });
+    cfg.targets = [...new Set(targets.split(",").map((target) => target.trim()).filter(Boolean))];
+    if (flow !== "demo") {
+      cfg.goal = await promptInput({
+        message: workflow === "compliance" ? "Readiness objective" : "Assessment goal",
+        default: cfg.goal,
+        validate: required("Assessment goal"),
+      });
+    }
+
+    await configureDefaultScopeTty();
+
+    console.log(section(workflow === "compliance" ? "Evidence policy" : "Run policy"));
+    if (workflowUsesCompliance(workflow)) {
+      cfg.framework = await promptSelect<ComplianceFramework>({
+        message: "Readiness framework",
+        choices: FRAMEWORKS.map((framework) => ({ name: framework, value: framework })),
+        default: cfg.framework,
+        loop: false,
+      });
+    }
     cfg.scanMode = await promptSelect<ScanMode>({
-      message: "Assessment depth",
+      message: workflow === "compliance" ? "Evidence review depth" : "Assessment depth",
       choices: [
         { name: "Quick", value: "quick", description: "Fast, conservative coverage" },
         { name: "Standard", value: "standard", description: "Balanced coverage and runtime" },
-        { name: "Deep", value: "deep", description: "Broader coverage and a larger step budget" },
+        { name: "Deep", value: "deep", description: "Broader model-guided coverage" },
       ],
       default: cfg.scanMode,
       loop: false,
     });
-    cfg.framework = await promptSelect<ComplianceFramework>({
-      message: "Readiness mapping",
-      choices: FRAMEWORKS.map((framework) => ({ name: framework, value: framework })),
-      default: cfg.framework,
-      loop: false,
-    });
     cfg.allowShell = await promptConfirm({
-      message: "Enable local scanners and shell tools for this authorized scope?",
+      message: workflow === "compliance" ? "Collect local scanner evidence?" : "Enable local scanners and shell tools?",
       default: cfg.allowShell,
     });
     cfg.authorized = await promptConfirm({
-      message: "I confirm written authorization for the targets, scope, and testing window above",
-      default: false,
+      message: "I confirm written authorization for the target(s) and scope above",
+      default: true,
     });
 
     await save();
@@ -846,7 +990,6 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
       console.log(colors.dim("assessment saved and ready"));
     }
   };
-
   const manageProfilesTty = async (): Promise<void> => {
     const action = await promptSelect<"setup" | "use" | "delete" | "back">({
       message: "Model profiles",
@@ -906,6 +1049,7 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
   };
 
   const commandChoices = [
+    { name: "/back", value: "back", description: "Return to the home screen" },
     { name: "/wizard", value: "wizard", description: "Configure and start a new assessment" },
     { name: "/run", value: "run", description: "Run the current authorized assessment" },
     { name: "/status", value: "status", description: "Review current configuration" },
@@ -916,7 +1060,7 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
     { name: "/profile", value: "profile", description: "Manage model providers and credentials" },
     { name: "/target", value: "target", description: "Replace assessment targets" },
     { name: "/goal", value: "goal", description: "Edit the assessment goal" },
-    { name: "/scope", value: "scope", description: "Edit full scope and authorization data" },
+    { name: "/scope", value: "scope", description: "Edit scope summary or advanced details" },
     { name: "/depth", value: "depth", description: "Change quick, standard, or deep coverage" },
     { name: "/framework", value: "framework", description: "Change readiness mapping" },
     { name: "/shell", value: "shell", description: "Enable or disable scanner tools" },
@@ -949,9 +1093,13 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
       }
 
       try {
-        if (action === "exit") return;
-        if (action === "wizard" || action === "scope") await runWizardTty();
-        else if (action === "run") await doRun();
+        if (action === "exit" || action === "back") return;
+        if (action === "wizard") await runWizardTty();
+        else if (action === "scope") {
+          await configureScopeTty();
+          invalidateAuthorization("scope changed");
+          await save();
+        } else if (action === "run") await doRun();
         else if (action === "status") printStatus();
         else if (action === "findings") await printFindings();
         else if (action === "report") await printReport();
@@ -987,12 +1135,12 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
           cfg.allowShell = await promptConfirm({ message: "Enable scanners and shell tools?", default: cfg.allowShell });
           await save();
         } else if (action === "authorize") {
-          if (!cfg.targets.length || !cfg.scopeNote || !cfg.scope?.authorizationReference) {
-            console.log(`${status("WARN")} ${colors.dim("complete /wizard scope data before authorization")}`);
+          if (!cfg.targets.length || !cfg.scopeNote) {
+            console.log(`${status("WARN")} ${colors.dim("set target and scope before authorization")}`);
           } else {
             cfg.authorized = await promptConfirm({
               message: "Confirm written authorization for the currently declared scope",
-              default: false,
+              default: true,
             });
             await save();
           }
@@ -1013,6 +1161,80 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
         } else if (action === "help") {
           console.log(HELP);
         }
+      } catch (error) {
+        if (isPromptExit(error)) continue;
+        console.log(`${status("FAIL")} ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+  };
+
+  const reviewResultsTty = async (): Promise<void> => {
+    console.log(section("Results"));
+    await printFindings();
+    await printReport();
+    const existingReports = [];
+    for (const reportPath of reportPaths()) {
+      if (await fileExists(reportPath)) existingReports.push(reportPath);
+    }
+    const action = await promptSelect<"report" | "folder" | "back">({
+      message: "Results action",
+      choices: [
+        ...(existingReports.length === 1
+          ? [{ name: "Open Markdown report", value: "report" as const, description: "Open the most recent assessment report" }]
+          : []),
+        { name: "Open workspace folder", value: "folder", description: "Browse reports, SARIF, state, and evidence" },
+        { name: "Back", value: "back", description: "Return to the home screen" },
+      ],
+      default: existingReports.length === 1 ? "report" : "folder",
+      loop: false,
+    });
+    if (action !== "back") await openTarget(action);
+  };
+
+  const resumeAssessmentTty = async (): Promise<void> => {
+    if (!cfg.targets.length) {
+      console.log(`${status("WARN")} ${colors.muted("no saved assessment is available")}`);
+      return;
+    }
+    if (!cfg.scopeNote) cfg.scopeNote = defaultScopeSummary();
+    cfg.authorized = false;
+    printStatus();
+    cfg.authorized = await promptConfirm({
+      message: "I confirm written authorization for this saved target and scope",
+      default: true,
+    });
+    await save();
+    if (!cfg.authorized) {
+      console.log(`${status("WARN")} ${colors.muted("assessment not started because authorization was not confirmed")}`);
+      return;
+    }
+    if (await promptConfirm({ message: "Start this assessment now?", default: true })) await doRun();
+  };
+
+  const runHomeTty = async (): Promise<void> => {
+    for (;;) {
+      let action: HomeAction;
+      try {
+        action = await promptSelect<HomeAction>({
+          message: "Home",
+          choices: homeMenuChoices(cfg.targets.length > 0),
+          pageSize: 8,
+          loop: false,
+        });
+      } catch (error) {
+        if (isPromptExit(error)) return;
+        throw error;
+      }
+
+      try {
+        if (action === "exit") return;
+        if (action === "pentest") await runWizardTty("pentest");
+        else if (action === "compliance") await runWizardTty("compliance");
+        else if (action === "demo") await runWizardTty("demo");
+        else if (action === "resume") await resumeAssessmentTty();
+        else if (action === "results") await reviewResultsTty();
+        else if (action === "profiles") await manageProfilesTty();
+        else if (action === "advanced") await runCommandMenuTty();
       } catch (error) {
         if (isPromptExit(error)) continue;
         console.log(`${status("FAIL")} ${error instanceof Error ? error.message : String(error)}`);
@@ -1066,10 +1288,15 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
         }
         break;
       case "/scope":
+        if (!arg) {
+          console.log(cfg.scopeNote ? colors.muted(cfg.scopeNote) : colors.dim("no scope set"));
+          break;
+        }
         cfg.scopeNote = arg;
+        cfg.scope = undefined;
         invalidateAuthorization("scope changed");
         await save();
-        console.log(colors.dim("scope note saved"));
+        console.log(colors.dim("scope summary saved"));
         break;
       case "/workflow":
         if (WORKFLOWS.has(arg as WorkflowMode)) await setWorkflow(arg as WorkflowMode);
@@ -1174,7 +1401,7 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
     );
     console.log(`  ${colors.dim("Update with")} ${accent("npm install -g @nullsquare/null-cli@latest")}`);
   }
-  console.log(`\n${accent("guided session")} ${colors.dim("- one-time model setup, then a scoped assessment wizard on every launch")}`);
+  console.log(`\n${accent("guided session")} ${colors.dim("- choose an assessment, review results, or open advanced commands")}`);
   if (loaded) {
     console.log(colors.dim(`resumed session - ${cfg.targets.length} target(s) - ${cfg.workflow}/${cfg.scanMode} - ${cfg.framework}`));
   } else {
@@ -1183,10 +1410,7 @@ export const runInteractive = async (workspaceDirArg?: string): Promise<void> =>
 
   if (isInteractiveTerminal()) {
     try {
-      if (await ensureProfileTty()) {
-        await runWizardTty();
-        await runCommandMenuTty();
-      }
+      if (await ensureProfileTty()) await runHomeTty();
     } catch (error) {
       if (!isPromptExit(error)) throw error;
     }

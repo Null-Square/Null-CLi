@@ -6,10 +6,11 @@ import { fileURLToPath } from "node:url";
 
 import { runPublicAgent } from "../agent/loop.js";
 import { mapFindingsToCompliance, normalizeFramework } from "../compliance/map.js";
+import { environmentApiKeyForProvider } from "../config/modelCatalog.js";
 import { loadModelProfile } from "../config/profiles.js";
 import type { AssessmentState, Finding } from "../findings/types.js";
 import { createAssessmentState } from "../findings/types.js";
-import { renderMarkdownReport } from "../reports/markdown.js";
+import { renderMarkdownReport, summarizeAssessment } from "../reports/markdown.js";
 import { renderSarif } from "../reports/sarif.js";
 import { ensureWorkspace, readJson, writeJson } from "../runtime/workspace.js";
 import { parseScannerPath } from "../scanners/parsers.js";
@@ -28,6 +29,13 @@ import {
 } from "./brand.js";
 import { createLiveReporter } from "./live.js";
 import { runInteractive } from "./interactive.js";
+import {
+  exitCodeForStates,
+  openLocalPath,
+  renderRunTrace,
+  reportPathForWorkspace,
+  successfulEvidenceCount,
+} from "./runView.js";
 import type { ScanMode, WorkflowMode } from "../agent/loop.js";
 
 interface ParsedArgs {
@@ -98,6 +106,17 @@ const defaultSkillsRoot = (): string => packagePath("skills");
 
 const defaultSandboxManifest = (): string => packagePath("sandbox/tools-manifest.json");
 
+const WEB_LAB_GOAL =
+  "Run a shallow, evidence-first assessment of an authorized training lab. Confirm reachability, capture safe web metadata, check common public files, optionally run enabled scanners, and report only evidence-backed simple issues.";
+
+const webLabScope = (target: string): string =>
+  `Authorized training-lab assessment for ${target}; exclude destructive testing, credential attacks, denial of service, persistence, exploit chaining, and third-party systems.`;
+
+const combineGuidance = (...items: Array<string | undefined>): string | undefined => {
+  const content = items.map((item) => item?.trim()).filter(Boolean);
+  return content.length ? content.join("\n\n") : undefined;
+};
+
 const home = (): string => [
   renderBanner(),
   "",
@@ -118,8 +137,11 @@ const usage = (version: string): string => [
   "",
   section("Commands"),
   `  ${colorCommand("interactive")} ${colors.dim("(or just")} ${colorCommand("null-ai")}${colors.dim(")")}   guided session: set scope/RoE, run, review findings`,
+  `  ${colorCommand("null-ai demo")} --target <authorized-lab-url> --authorize ${colors.dim("[--out .null/demo] [--allow-shell]")}`,
+  `  ${colorCommand("null-ai run show")} <workspace>      ${colors.dim("render saved run-state trace")}`,
+  `  ${colorCommand("null-ai run open")} <workspace>      ${colors.dim("open report or workspace folder")}`,
   `  ${colorCommand("agent run")} --target <url|host|path> [--workflow pentest|compliance] [--scan-mode quick|standard|deep]`,
-  `    ${colors.dim("[--goal <text>] [--framework <id>] [--out .null/run] [--allow-shell] [--dry-run] [--stream]")}`,
+  `    ${colors.dim("[--goal <text>] [--profile web-lab] [--framework <id>] [--out .null/run] [--allow-shell] [--dry-run] [--stream]")}`,
   `  ${colorCommand("null-ai sandbox verify")} [--manifest <path>]`,
   `  ${colorCommand("null-ai ingest")} <file-or-dir> --out findings.json`,
   `  ${colorCommand("null-ai report generate")} <findings.json> --out report.md [--sarif findings.sarif]`,
@@ -129,7 +151,7 @@ const usage = (version: string): string => [
   "",
   section("Model env"),
   "  Active model profile (configured in the interactive wizard)",
-  "  NULL_AI_API_KEY or OPENAI_API_KEY",
+  "  NULL_AI_API_KEY or provider-specific key env (OPENAI, DEEPSEEK, ANTHROPIC, GLM, MOONSHOT, DASHSCOPE/QWEN)",
   "  NULL_AI_BASE_URL or OPENAI_BASE_URL",
   "  NULL_AI_MODEL or OPENAI_MODEL",
   "",
@@ -160,15 +182,22 @@ const commandAgentRun = async (parsed: ParsedArgs): Promise<void> => {
     throw new Error(`Unknown --workflow "${workflow}". Use pentest or compliance.`);
   }
 
-  const goal = flagString(flags, "goal", defaultGoalForWorkflow(workflow as WorkflowMode))!;
+  const assessmentProfile = flagString(flags, "profile");
+  if (assessmentProfile && assessmentProfile !== "web-lab") {
+    throw new Error(`Unknown assessment profile "${assessmentProfile}". Supported profile: web-lab.`);
+  }
+  const goal = flagString(
+    flags,
+    "goal",
+    assessmentProfile === "web-lab" ? WEB_LAB_GOAL : defaultGoalForWorkflow(workflow as WorkflowMode),
+  )!;
   const baseOut = flagString(flags, "out", ".null/run")!;
-  const framework = flagString(flags, "framework", "owasp-top10")!;
+  const framework = flagString(flags, "framework") ?? (workflow === "compliance" ? "owasp-top10" : undefined);
   const profile = await loadModelProfile().catch(() => null);
   const apiKey =
     flagString(flags, "api-key") ??
-    process.env.NULL_AI_API_KEY ??
-    process.env.OPENAI_API_KEY ??
-    profile?.apiKey;
+    profile?.apiKey ??
+    environmentApiKeyForProvider(profile?.provider ?? "openai");
   const model =
     flagString(flags, "model") ??
     process.env.NULL_AI_MODEL ??
@@ -189,6 +218,9 @@ const commandAgentRun = async (parsed: ParsedArgs): Promise<void> => {
   // Load the matching public scan-mode skill so its guidance shapes the run.
   const skillsRoot = flagString(flags, "skills") ?? defaultSkillsRoot();
   const scanModeSkill = await loadSkillBySlug(skillsRoot, `scan-mode-${scanMode}`).catch(() => undefined);
+  const webLabSkill = assessmentProfile === "web-lab"
+    ? await loadSkillBySlug(skillsRoot, "web-lab").catch(() => undefined)
+    : undefined;
 
   const multi = targets.length > 1;
   const states: AssessmentState[] = [];
@@ -196,7 +228,7 @@ const commandAgentRun = async (parsed: ParsedArgs): Promise<void> => {
   for (const target of targets) {
     const workspaceDir = multi ? path.join(baseOut, targetSlug(target)) : baseOut;
     console.error(
-      renderRunHeader({ target, goal, framework, workspaceDir, mode: dryRun ? "dry-run" : "live", scanMode }),
+      renderRunHeader({ target, goal, ...(framework ? { framework } : {}), workspaceDir, mode: dryRun ? "dry-run" : "live", scanMode }),
     );
 
     const reporter = createLiveReporter(target);
@@ -210,16 +242,26 @@ const commandAgentRun = async (parsed: ParsedArgs): Promise<void> => {
         apiKey,
         maxSteps: parsed.all["max-steps"] ? flagNumber(flags, "max-steps", 8) : undefined,
         allowShell: flags["allow-shell"] === true,
-        framework,
+        ...(framework ? { framework } : {}),
+        scope: flagString(flags, "scope") ?? (assessmentProfile === "web-lab" ? webLabScope(target) : undefined),
         workflow: workflow as WorkflowMode,
         scanMode: scanMode as ScanMode,
-        scanModeGuidance: scanModeSkill?.content,
+        scanModeGuidance: combineGuidance(webLabSkill?.content, scanModeSkill?.content),
         dryRun: flags["dry-run"] === true,
         streamModel: flags.stream === true,
         onEvent: reporter.onEvent,
       });
       states.push(state);
-      console.log(renderRunSummary(state.findings, path.resolve(state.workspaceDir)));
+      console.log(
+        renderRunSummary(state.findings, path.resolve(state.workspaceDir), {
+          evidence: state.evidence.length,
+          successfulEvidence: successfulEvidenceCount(state),
+          actions: state.actions.length,
+          outcome: state.outcome,
+          summary: summarizeAssessment(state),
+          reportPath: path.resolve(state.workspaceDir, "reports", "report.md"),
+        }),
+      );
     } finally {
       reporter.stop();
     }
@@ -229,6 +271,122 @@ const commandAgentRun = async (parsed: ParsedArgs): Promise<void> => {
     const allFindings = states.flatMap((state) => state.findings);
     console.log(renderMultiSummary(states.length, allFindings, path.resolve(baseOut)));
   }
+  process.exitCode = exitCodeForStates(states);
+};
+
+const demoHelp = (): string => [
+  section("Demo"),
+  `  ${colorCommand("null-ai demo")} --target <authorized-lab-url> --authorize`,
+  "",
+  "Run a shallow, evidence-first assessment against an authorized training lab.",
+  "Use your own OWASP Juice Shop, WebGoat, or equivalent training lab URL.",
+  "",
+  section("Options"),
+  "  --target <url>       Required authorized lab URL",
+  "  --authorize          Required for live target contact",
+  "  --out <dir>          Workspace output directory (default: .null/demo)",
+  "  --allow-shell        Permit local scanner wrappers",
+  "  --dry-run            Write a plan without model calls or target contact",
+  "  --scan-mode <mode>   quick, standard, or deep (default: standard)",
+  "",
+  colors.dim("Example: null-ai demo --target http://localhost:3000 --authorize --allow-shell"),
+].join("\n");
+
+const commandDemo = async (parsed: ParsedArgs): Promise<void> => {
+  const { flags } = parsed;
+  if (flags.help === true) {
+    console.log(demoHelp());
+    return;
+  }
+  const target = requireValue(flagString(flags, "target"), "--target");
+  const liveRequested = flags["dry-run"] !== true;
+  if (liveRequested && flags.authorize !== true) {
+    throw new Error(
+      [
+        "Demo runs contact the target. Confirm you own or are authorized to test it with --authorize.",
+        `Example: null-ai demo --target ${target} --authorize`,
+      ].join("\n"),
+    );
+  }
+
+  const scanMode = (flagString(flags, "scan-mode") ?? flagString(flags, "depth", "standard") ?? "standard").toLowerCase();
+  if (!SCAN_MODES.has(scanMode)) {
+    throw new Error(`Unknown scan depth "${scanMode}". Use quick, standard, or deep (--scan-mode / --depth).`);
+  }
+
+  const workspaceDir = flagString(flags, "out", ".null/demo")!;
+  const profile = await loadModelProfile().catch(() => null);
+  const apiKey =
+    flagString(flags, "api-key") ??
+    profile?.apiKey ??
+    environmentApiKeyForProvider(profile?.provider ?? "openai");
+  const model =
+    flagString(flags, "model") ??
+    process.env.NULL_AI_MODEL ??
+    process.env.OPENAI_MODEL ??
+    profile?.model;
+  const baseUrl =
+    flagString(flags, "base-url") ??
+    process.env.NULL_AI_BASE_URL ??
+    process.env.OPENAI_BASE_URL ??
+    profile?.baseUrl;
+  const dryRun = flags["dry-run"] === true || !apiKey;
+  const skillsRoot = flagString(flags, "skills") ?? defaultSkillsRoot();
+  const scanModeSkill = await loadSkillBySlug(skillsRoot, `scan-mode-${scanMode}`).catch(() => undefined);
+  const webLabSkill = await loadSkillBySlug(skillsRoot, "web-lab").catch(() => undefined);
+
+  console.error(renderRunHeader({ target, goal: WEB_LAB_GOAL, workspaceDir, mode: dryRun ? "dry-run" : "live", scanMode }));
+  const reporter = createLiveReporter(target);
+  try {
+    const state = await runPublicAgent({
+      target,
+      goal: WEB_LAB_GOAL,
+      scope: webLabScope(target),
+      workspaceDir,
+      model,
+      baseUrl,
+      apiKey,
+      allowShell: flags["allow-shell"] === true,
+      workflow: "pentest",
+      scanMode: scanMode as ScanMode,
+      scanModeGuidance: combineGuidance(webLabSkill?.content, scanModeSkill?.content),
+      dryRun,
+      streamModel: flags.stream === true,
+      onEvent: reporter.onEvent,
+    });
+    console.log(
+      renderRunSummary(state.findings, path.resolve(state.workspaceDir), {
+        evidence: state.evidence.length,
+        successfulEvidence: successfulEvidenceCount(state),
+        actions: state.actions.length,
+        outcome: state.outcome,
+        summary: summarizeAssessment(state),
+        reportPath: reportPathForWorkspace(state.workspaceDir),
+      }),
+    );
+    process.exitCode = exitCodeForStates([state]);
+  } finally {
+    reporter.stop();
+  }
+};
+
+const commandRun = async (positionals: string[], flags: Record<string, string | boolean>): Promise<void> => {
+  const subcommand = positionals[1];
+  const workspace = path.resolve(requireValue(positionals[2], "workspace"));
+  if (subcommand === "show") {
+    const state = await readJson<AssessmentState>(path.join(workspace, "run-state.json"));
+    console.log(renderRunTrace(state, workspace));
+    return;
+  }
+  if (subcommand === "open") {
+    const reportPath = reportPathForWorkspace(workspace);
+    const openFolder = flags.folder === true;
+    const target = openFolder ? workspace : reportPath;
+    const ok = openLocalPath(target);
+    console.log(ok ? `${status("PASS")} opened ${openFolder ? "workspace" : "report"}` : `${colors.dim(openFolder ? "workspace" : "report")} ${accent(target)}`);
+    return;
+  }
+  throw new Error("Unknown run command. Use: null-ai run show <workspace> | null-ai run open <workspace>");
 };
 
 const commandSandboxVerify = async (flags: Record<string, string | boolean>): Promise<void> => {
@@ -324,7 +482,7 @@ const main = async (): Promise<void> => {
     console.log(`${accent("Null AI CLI")} ${colors.dim("by NullSquare")} v${await readVersion()}`);
     return;
   }
-  if (command === "help" || parsed.flags.help === true) {
+  if (command === "help" || (!command && parsed.flags.help === true)) {
     console.log(usage(await readVersion()));
     return;
   }
@@ -338,6 +496,8 @@ const main = async (): Promise<void> => {
     console.log(home());
     return;
   }
+  if (command === "demo") return commandDemo(parsed);
+  if (command === "run") return commandRun(parsed.positionals, parsed.flags);
   if (command === "agent" && subcommand === "run") return commandAgentRun(parsed);
   if (command === "sandbox" && subcommand === "verify") return commandSandboxVerify(parsed.flags);
   if (command === "ingest") return commandIngest(parsed.positionals, parsed.flags);

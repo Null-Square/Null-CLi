@@ -14,7 +14,7 @@ Recommended flow:
 3. Run safe scanner presets where authorized.
 4. Ingest scanner output and attach raw artifacts.
 5. Draft findings with severity, CWE, OWASP, evidence, and remediation.
-6. Generate compliance readiness mapping.
+6. Generate readiness mapping only when the active workflow is compliance.
 7. Finish with an honest summary, including limitations.
 
 This public skill intentionally avoids advanced validation workflows and exploit strategy.

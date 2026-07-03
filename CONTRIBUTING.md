@@ -4,6 +4,8 @@ Contributions should keep the public boundary intact.
 
 Good contributions:
 
+- CLI and documentation polish that improves public usability.
+- Clear run summaries, evidence trails, reports, and local artifact handling.
 - New scanner parsers for public artifact formats.
 - Public skills with conservative testing guidance.
 - Report formatting improvements.
@@ -17,6 +19,10 @@ Avoid:
 - External callback infrastructure.
 - Credential attacks.
 - Customer traces or private benchmark data.
+
+Use [docs/public-boundary.md](docs/public-boundary.md) as the source of truth:
+public, commodity, user-visible behavior is allowed; closed NullSquare harness
+logic, managed-platform internals, and non-public decision paths are not.
 
 ## Development
 

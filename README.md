@@ -62,14 +62,23 @@ Binaries after install: `null-ai`, `null-cli`, `null`, `nullsquare` (all identic
 ## Quick Start
 
 ```bash
-# Open the guided assessment
+# Open the guided home screen
 null-ai
+
+# Or run the demo flow against a lab you are authorized to test
+null-ai demo --target http://localhost:3000 --authorize --out .null/demo
 ```
 
-The wizard creates a reusable model profile, collects workflow, goal, target,
-scope, scan depth, and authorization, then offers to start the assessment
-immediately. The API key is encrypted in a local user vault and is never written
-to the assessment session.
+The demo flow is designed for your own OWASP Juice Shop, WebGoat, or equivalent training lab. It refuses live target contact unless you pass `--authorize`, writes a full local report, and keeps the public agent shallow and evidence-first.
+
+```bash
+null-ai run show .null/demo
+null-ai run open .null/demo
+```
+
+Scale the same workflow with hosted infrastructure, dashboards, team evidence review, and enterprise reporting at **[nullsquare.net](https://nullsquare.net)**.
+
+First launch creates a reusable model profile. Later launches open Home, where pentest, compliance readiness, lab demo, saved assessment, results, model settings, and advanced commands are separate choices. The API key is encrypted in a local user vault and is never written to the assessment session.
 
 For automation or offline planning:
 
@@ -90,41 +99,58 @@ On the first launch only, Null AI creates a model profile:
 null-ai
 
 First-time model setup
-? Provider                 OpenAI / OpenRouter / Groq / Ollama / Custom
+? Provider                 OpenAI / DeepSeek / Anthropic / GLM / Moonshot / Qwen
 ? Profile name             default
-? API base URL             https://api.openai.com/v1
+? Use custom API endpoint? No
 ? API key                  ********
   42 models discovered
-? Model family             GPT-5
+? Model family             OpenAI
 ? Model                    gpt-5-mini
 ```
 
 The API key prompt remains visible while input is masked. The key is encrypted
 in the local credential vault. Available models are discovered from the
-provider; family and searchable model selectors replace manual model typing.
-Change profiles later with `/profile`.
+provider; family and searchable model selectors replace manual model typing. Supported profile providers are OpenAI, DeepSeek, Anthropic, GLM, Moonshot, and Qwen. Change profiles later with `/profile`.
 
-Every launch then opens a separate run wizard:
+Later launches open a task-focused home screen instead of forcing a wizard:
 
 ```text
-New assessment
-? Workflow                 Pentest
+? Home
+❯ New pentest
+  Compliance readiness
+  Resume saved assessment
+  Authorized lab demo
+  Results and reports
+  Model settings
+  Advanced commands
+```
+
+Pentest asks only for pentest inputs. A safe scope is generated automatically; detailed exclusions remain optional:
+
+```text
+New pentest
 ? Target(s)                https://app.example
 ? Assessment goal          Test the authorized staging application
 
 Scope & authorization
-? In-scope surfaces        Staging web application and API
-? Out-of-scope exclusions  Production, DoS, and third-party systems
-? Authorization reference SEC-2041 / application owner
-? Authorized test window   Current engagement window
-? Request-rate limit       Maximum 2 requests/second
+  default scope             Authorized testing for app.example; destructive testing excluded
+? Customize scope?         No
+
+Run policy
+? Assessment depth         Standard
+? Enable local scanners?   No
 ? Confirm authorization    Yes
 ? Start assessment now?    Yes
 ```
 
-After setup or a run, the searchable command launcher supports `/` filtering,
-arrow-key navigation, descriptions, and Enter selection. The CLI also checks npm
-periodically and displays a one-line upgrade command when a newer version exists.
+Compliance readiness follows a different path: target, readiness objective, framework, evidence-review depth, optional scanner evidence, and authorization. Pentest does not ask for a compliance framework or generate compliance mapping. Advanced scope details can capture exclusions, authorization reference, test window, and rate limits when needed.
+
+During a live run, the terminal shows planning, discovery, scanning, analysis, and reporting phases plus structured agent narration (`agent ...`),
+tool calls, and artifact paths as they happen. The same trail is saved in the
+report's **Agent Activity** section. After setup or a run, the searchable command
+launcher supports `/` filtering, arrow-key navigation, descriptions, and Enter
+selection. The CLI also checks npm periodically and displays a one-line upgrade
+command when a newer version exists.
 
 | Command | Purpose |
 |---------|---------|
@@ -133,7 +159,7 @@ periodically and displays a one-line upgrade command when a newer version exists
 | `/workflow pentest\|compliance` | Choose assessment workflow |
 | `/depth quick\|standard\|deep` | Choose scan depth |
 | `/target <t>` / `/targets [clear]` | Manage scope (repeatable) |
-| `/scope <text>` / `/authorize` | Declare rules of engagement and confirm authorization |
+| `/scope <text>` / `/authorize` | Set a scope summary and confirm authorization |
 | `/framework` / `/shell on\|off` / `/stream on\|off` | Configure the run |
 | `/env model\|key\|base <v>` | Temporary per-process model overrides |
 | `/run` / `/findings` / `/report` / `/compliance` / `/open report` | Run and review |
@@ -145,11 +171,12 @@ on Windows); `session.json` never stores the API key.
 
 ## Key Capabilities
 
-- **Guided interactive session** - one-time model onboarding, per-run scope wizard, searchable commands, and report opening.
+- **Demo-to-report flow** - `null-ai demo` turns an authorized lab target into a traceable run and Markdown/SARIF report.
+- **Guided interactive session** - one-time model onboarding, task-focused home screen, distinct pentest/compliance flows, searchable commands, and report opening.
 - **Scoped single-agent loop** - one safe action per turn, hard scope boundaries, evidence-first reporting.
 - **Scan modes** - `--scan-mode quick | standard | deep` trade speed for coverage.
 - **Multi-target** - repeat `--target` to assess several assets in one command.
-- **Live terminal UX** - branded NullSquare panels with real-time step, tool, and finding output.
+- **Live terminal UX** - branded NullSquare panels with real-time agent narration, tool, artifact, and finding output.
 - **Scanner ingestion** - normalize `nuclei`, `semgrep`, and `trivy` JSON/JSONL into unified findings.
 - **Engineer-ready outputs** - Markdown reports and SARIF for code scanning / CI.
 - **Compliance readiness** - map findings to `owasp-top10`, `pci-dss-lite`, `iso27001-lite`, `nist-csf-lite`.
@@ -165,7 +192,7 @@ on Windows); `session.json` never stores the API key.
 | `scanner_run` | Orchestrate scanners (gated behind `--allow-shell`) |
 | `attach_evidence` | Attach raw artifacts to the assessment |
 | `report_finding` | Draft evidence-backed findings with severity, CWE, OWASP, CVSS |
-| `map_compliance` | Map findings to a readiness framework |
+| `map_compliance` | Map findings to a readiness framework (compliance workflow only) |
 | `file_read` | Read local target sources within scope |
 
 ## Vulnerability Coverage
@@ -182,13 +209,13 @@ on Windows); `session.json` never stores the API key.
 
 ## Scan Modes
 
-| Mode | Steps | Use when |
-|------|-------|----------|
-| `quick` | ~4 | Fast scoped review of a single target |
-| `standard` | ~8 | Repeatable assessment (default) |
-| `deep` | ~16 | Broader coverage with fuller evidence & compliance mapping |
+| Mode | Model guidance | Use when |
+|------|----------------|----------|
+| `quick` | Focused, conservative coverage | Fast scoped review of a single target |
+| `standard` | Balanced repeatable coverage | Default open-source assessment |
+| `deep` | Broader evidence and compliance coverage | A more thorough authorized review |
 
-Each mode is backed by a public skill (`null-ai skills show scan-mode-deep`) that shapes the agent's plan.
+Each mode is backed by a public skill (`null-ai skills show scan-mode-deep`) that shapes the model's plan. Modes do not change loop limits: the model exits through an explicit final response, with one global 300-turn safety ceiling. Budget warnings appear near that ceiling, and a partial inconclusive report is always saved if it is reached. Use `--max-steps <n>` only when you intentionally want a lower ceiling.
 
 ## Outputs
 
@@ -203,11 +230,21 @@ Each assessment writes deterministic local artifacts:
   artifacts/            # captured evidence
 ```
 
+Review an existing workspace at any time:
+
+```bash
+null-ai run show .null/example
+null-ai run open .null/example
+```
+
 ## Scanner Ingestion & Reports
 
 ```bash
 # Normalize scanner output into Null AI findings
 null-ai ingest artifacts/scans --out findings.json
+
+# Normalize artifacts from a demo workspace
+null-ai ingest .null/demo/artifacts/scans --out .null/demo/findings-from-scanners.json
 
 # Generate a report + SARIF
 null-ai report generate findings.json --out report.md --sarif findings.sarif --framework iso27001-lite
@@ -237,11 +274,13 @@ Covers `httpx`, `nuclei`, `katana`, `nmap`, `semgrep`, `trivy`, `gitleaks`, `cur
     node dist/cli/index.js agent run --target https://example.com --dry-run --out .null/ci
 ```
 
+Headless exit codes: `0` complete with no findings, `2` complete with findings, `3` inconclusive, `1` CLI/runtime failure.
+
 For live assessments, provide `NULL_AI_API_KEY` and keep targets limited to systems you are authorized to test.
 
 ## Public Boundary
 
-This repo ships the **open-source framework layer**: CLI + branded terminal, scoped public agent loop, scanner runtime checks, artifact ingestion, evidence-backed findings, reports/SARIF, lightweight compliance mapping, and public skill packs.
+This repo ships the **open-source framework layer**: CLI + branded terminal, scoped public agent loop, scanner runtime checks, artifact ingestion, evidence-backed findings, reports/SARIF, lightweight compliance mapping, public skill packs, demo flow, and local trace viewer.
 
 It does **not** include NullSquare managed-platform internals, customer artifacts, non-public heuristics, multi-agent orchestration, cross-run memory, hosted service logic, or enterprise automation. See [docs/public-boundary.md](docs/public-boundary.md).
 
@@ -255,7 +294,7 @@ Use Null AI CLI only on systems you own or have explicit permission to test. Kee
 
 ## Documentation
 
-- [Architecture](docs/architecture.md) | [CLI reference](docs/cli.md) | [Scan modes](docs/scan-modes.md) | [Compliance](docs/compliance.md) | [Public boundary](docs/public-boundary.md)
+- [Demo](docs/demo.md) | [Architecture](docs/architecture.md) | [CLI reference](docs/cli.md) | [Scan modes](docs/scan-modes.md) | [Compliance](docs/compliance.md) | [Public boundary](docs/public-boundary.md)
 
 ## Contributing
 

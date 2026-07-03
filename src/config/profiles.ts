@@ -3,9 +3,11 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+import { normalizeModelProviderId, type ModelProviderId } from "./modelCatalog.js";
+
 export interface ModelProfile {
   name: string;
-  provider?: string;
+  provider?: ModelProviderId;
   model: string;
   baseUrl?: string;
   updatedAt: string;
@@ -122,17 +124,22 @@ export const loadModelProfile = async (name?: string): Promise<ResolvedModelProf
 };
 
 export const saveModelProfile = async (
-  input: { name: string; provider?: string; model: string; baseUrl?: string; apiKey?: string | null },
+  input: { name: string; provider?: ModelProviderId | string; model: string; baseUrl?: string; apiKey?: string | null },
 ): Promise<ResolvedModelProfile> => {
   const name = input.name.trim();
   const model = input.model.trim();
+  const requestedProvider = input.provider?.trim();
   if (!name) throw new Error("Profile name is required.");
   if (!model) throw new Error("Model id is required.");
+  const provider = normalizeModelProviderId(requestedProvider);
+  if (requestedProvider && !provider) {
+    throw new Error(`Unsupported model provider "${requestedProvider}". Supported providers: openai, deepseek, anthropic, glm, moonshot, qwen.`);
+  }
 
   const profiles = await readJsonOr(profileStorePath(), emptyProfiles());
   const profile: ModelProfile = {
     name,
-    provider: input.provider,
+    ...(provider ? { provider } : {}),
     model,
     baseUrl: input.baseUrl?.trim() || undefined,
     updatedAt: new Date().toISOString(),

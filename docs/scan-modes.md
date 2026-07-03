@@ -1,16 +1,18 @@
 # Scan Modes
 
-`--scan-mode` selects how much surface the agent covers and how many steps it may
-spend. Each mode is backed by a public skill that shapes the agent's plan; view it
+Scan modes are prompt profiles. They tell the model how broad and detailed the authorized assessment should be, but they do not change runtime limits or mechanically require a number of tool calls.
+
+All modes share one 300-turn safety ceiling. Normal completion happens when the model returns an explicit final assessment response. The agent receives warnings near the ceiling and always writes a partial inconclusive report if it is reached. Use `--max-steps <n>` only to choose a lower operator-defined ceiling.
+
+`--scan-mode` selects how much surface the model should cover. Each mode is backed
+by a public skill that shapes the agent's plan; view it
 with `null-ai skills show scan-mode-<mode>`.
 
-| Mode | Step budget | Intent |
-|------|-------------|--------|
-| `quick` | ~4 | Fast, conservative review of a single authorized target. |
-| `standard` | ~8 | Repeatable open-source assessment (default). |
-| `deep` | ~16 | Broader coverage with fuller evidence and compliance mapping. |
-
-You can always override the budget with `--max-steps <n>`.
+| Mode | Prompt intent |
+|------|---------------|
+| `quick` | Fast, conservative review of a single authorized target. |
+| `standard` | Repeatable open-source assessment (default). |
+| `deep` | Broader coverage with fuller evidence and compliance mapping. |
 
 ## Quick
 

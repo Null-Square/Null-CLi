@@ -1,0 +1,28 @@
+Run Trace
+  outcome   PASS complete
+  target    http://localhost:3000
+  goal      Run a shallow, evidence-first assessment of an authorized training lab.
+  workspace .null/demo
+  report    .null/demo/reports/report.md
+
+Assessment Summary
+  The local lab was reachable. Null AI captured HTTP metadata, checked common
+  public files, attached raw artifacts, and reported one low-severity
+  evidence-backed issue suitable for demo purposes.
+
+Findings (1)
+  LOW      Missing HSTS header on lab endpoint http://localhost:3000
+
+Evidence (3)
+  evidence-0001 HTTP response headers (http_exchange) artifacts/http-headers.json
+  evidence-0002 robots.txt capture (http_exchange) artifacts/robots.json
+  evidence-0003 httpx scanner output (scanner_artifact) artifacts/scans/httpx.json
+
+Agent Activity (5)
+  PASS step 1 create_note note created
+  PASS step 2 http_request HTTP request completed artifacts: artifacts/http-headers.json
+  PASS step 3 http_request HTTP request completed artifacts: artifacts/robots.json
+  PASS step 4 report_finding finding reported
+  PASS step 5 finish_assessment assessment finished
+
+Scale this on the managed platform -> nullsquare.net

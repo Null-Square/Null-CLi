@@ -14,7 +14,7 @@ CLI command
 
 The agent loop asks an OpenAI-compatible model for one JSON action at a time. The model can call only registered public tools. Tool results are returned to the model as text, and final artifacts are written locally.
 
-The loop emits typed events (`step`, `tool`, `finding`, `note`, `done`) that the CLI renders as a live, branded status line while the run is in progress. The chosen scan mode sets the step budget and injects the matching public skill as planning guidance.
+The loop emits typed events (`phase`, `step`, `tool`, `finding`, `note`, `done`) that the CLI renders as planning, discovery, scanning, analysis, and reporting progress. The chosen scan mode only injects the matching public skill as planning guidance; every mode shares the same runtime safety ceiling. Pentest omits the compliance tool and mapping entirely, while the compliance workflow adds the selected readiness framework.
 
 The public implementation does not contain managed-platform orchestration, enterprise validation workflows, cross-run memory, multi-agent topology, customer artifact review systems, or non-public prompt paths.
 

@@ -52,6 +52,56 @@ const complianceSection = (mappings: ComplianceMapping[]): string => {
     .join("\n");
 };
 
+const evidenceSection = (state: AssessmentState): string => {
+  if (!state.evidence.length) return "No evidence artifacts were attached.";
+  return state.evidence
+    .map((entry) => {
+      const pathHint = entry.path ?? "";
+      const role =
+        /failed|diagnostic/i.test(pathHint)
+          ? "diagnostic"
+          : entry.kind === "scanner_artifact"
+            ? "scanner observation"
+            : "target evidence";
+      return `- ${entry.id}: ${entry.title} (${entry.kind}, ${role})${entry.path ? ` - ${entry.path}` : ""}`;
+    })
+    .join("\n");
+};
+
+const actionSection = (state: AssessmentState): string => {
+  const actions = state.actions ?? [];
+  if (!actions.length) return "No tool activity was recorded.";
+  return actions
+    .map((action) => {
+      const artifacts = action.artifactPaths.length ? ` Artifacts: ${action.artifactPaths.join(", ")}.` : "";
+      const reason = action.reason ? ` Reason: ${action.reason}.` : "";
+      const say = action.say ? ` Agent: ${action.say}` : "";
+      return `- ${action.id}: step ${action.step} ${action.tool} - ${action.ok ? "ok" : "failed"} (${action.message}).${say}${reason}${artifacts}`;
+    })
+    .join("\n");
+};
+
+export const summarizeAssessment = (state: AssessmentState): string => {
+  const summary = state.notes.find((note) => note.title === "Assessment summary");
+  if (summary?.content.trim()) return summary.content.trim();
+  if (state.outcome === "dry-run") return "Dry-run planning completed. No live target contact or model-driven assessment was performed.";
+  if (state.outcome === "inconclusive") return "The assessment ended inconclusive. Review the evidence and agent activity sections for the blocking condition.";
+  if (!state.findings.length) return "The assessment completed and did not report any evidence-backed findings.";
+  return `The assessment completed with ${state.findings.length} evidence-backed finding(s).`;
+};
+
+const successfulEvidenceCount = (state: AssessmentState): number =>
+  (state.actions ?? [])
+    .filter((action) => action.ok && action.artifactPaths.length > 0)
+    .reduce((count, action) => count + action.artifactPaths.length, 0);
+
+const notesSection = (state: AssessmentState): string => {
+  if (!state.notes.length) return "No notes were recorded.";
+  return state.notes
+    .map((note) => [`### ${note.id}: ${note.title}`, "", note.content.trim() || "No content."].join("\n"))
+    .join("\n\n");
+};
+
 export const renderMarkdownReport = (state: AssessmentState): string => {
   const findings = [...state.findings].sort(
     (left, right) => severityOrder[right.severity] - severityOrder[left.severity],
@@ -59,10 +109,6 @@ export const renderMarkdownReport = (state: AssessmentState): string => {
   const findingText = findings.length
     ? findings.map(findingSection).join("\n\n")
     : "No findings were reported by this run.";
-  const notes = state.notes.length
-    ? state.notes.map((note) => `- ${note.title}: ${note.content.replace(/\s+/g, " ").slice(0, 240)}`).join("\n")
-    : "- No notes";
-
   return [
     "# Null CLI Assessment Report",
     "",
@@ -77,19 +123,35 @@ export const renderMarkdownReport = (state: AssessmentState): string => {
     "",
     "## Executive Summary",
     "",
-    `${findings.length} finding(s) reported. Highest severity: ${findings[0]?.severity ?? "none"}.`,
+    `Outcome: ${state.outcome}. ${findings.length} finding(s) reported. Highest severity: ${findings[0]?.severity ?? "none"}. Evidence artifacts: ${state.evidence.length}. Agent actions: ${state.actions?.length ?? 0}.`,
+    state.outcome === "inconclusive"
+      ? successfulEvidenceCount(state) > 0
+        ? "Successful target evidence was captured, but the assessment did not reach complete coverage. Treat the result as partial and inconclusive; review the assessment summary and activity trace below."
+        : "This run did not capture successful target evidence. Treat the result as inconclusive, not as a clean security result. Diagnostic artifacts may still be attached below."
+      : "",
+    "",
+    "## Assessment Summary",
+    "",
+    summarizeAssessment(state),
     "",
     "## Findings",
     "",
     findingText,
     "",
-    "## Compliance Readiness Mapping",
+    "## Evidence",
     "",
-    complianceSection(state.complianceMappings),
+    evidenceSection(state),
+    "",
+    "## Agent Activity",
+    "",
+    actionSection(state),
+    ...(state.complianceMappings.length
+      ? ["", "## Compliance Readiness Mapping", "", complianceSection(state.complianceMappings)]
+      : []),
     "",
     "## Notes",
     "",
-    notes,
+    notesSection(state),
     "",
   ].join("\n");
 };

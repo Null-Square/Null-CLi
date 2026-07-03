@@ -57,6 +57,20 @@ export interface AssessmentNote {
   createdAt: string;
 }
 
+export interface AssessmentAction {
+  id: string;
+  step: number;
+  tool: string;
+  ok: boolean;
+  say?: string;
+  reason?: string;
+  message: string;
+  artifactPaths: string[];
+  createdAt: string;
+}
+
+export type AssessmentOutcome = "complete" | "dry-run" | "inconclusive" | "failed";
+
 export interface AssessmentState {
   target: string;
   goal: string;
@@ -64,7 +78,9 @@ export interface AssessmentState {
   findings: Finding[];
   evidence: EvidenceRef[];
   notes: AssessmentNote[];
+  actions: AssessmentAction[];
   complianceMappings: ComplianceMapping[];
+  outcome: AssessmentOutcome;
   completed: boolean;
   startedAt: string;
   finishedAt?: string;
@@ -81,7 +97,9 @@ export const createAssessmentState = (
   findings: [],
   evidence: [],
   notes: [],
+  actions: [],
   complianceMappings: [],
+  outcome: "inconclusive",
   completed: false,
   startedAt: new Date().toISOString(),
 });
